@@ -17,7 +17,7 @@ For every item:
 
 ## 2. CI Pipeline
 
-- [ ] Initialize GitHub repository and push
+- [x] Initialize GitHub repository and push
 - [ ] Add CI workflow for Node.js v24
 - [ ] Enable dependency caching
 - [ ] Install dependencies
