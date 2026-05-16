@@ -18,12 +18,12 @@ For every item:
 ## 2. CI Pipeline
 
 - [x] Initialize GitHub repository and push
-- [ ] Add CI workflow for Node.js v24
-- [ ] Enable dependency caching
-- [ ] Install dependencies
-- [ ] Run lint checks
-- [ ] Run type checks
-- [ ] Build the project
+- [x] Add CI workflow for Node.js v24
+- [x] Enable dependency caching
+- [x] Install dependencies
+- [x] Run lint checks
+- [x] Run type checks
+- [x] Build the project
 
 ## 3. Initialize Unit Tests (Jest + React Testing Library)
 
