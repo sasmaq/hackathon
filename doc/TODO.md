@@ -27,11 +27,11 @@ For every item:
 
 ## 3. Initialize Unit Tests (Jest + React Testing Library)
 
-- [ ] Add Jest and React Testing Library dependencies
-- [ ] Add test config (jest.config, setupTests, tsconfig updates)
-- [ ] Add npm scripts: `test`, `test:watch`, `test:ci`
-- [ ] Create first unit test
-- [ ] Update CI workflow to run unit tests step
+- [x] Add Jest and React Testing Library dependencies
+- [x] Add test config (jest.config, setupTests, tsconfig updates)
+- [x] Add npm scripts: `test`, `test:watch`, `test:ci`
+- [x] Create first unit test
+- [x] Update CI workflow to run unit tests step
 
 ## 4. Netlify Deployment via CLI
 
