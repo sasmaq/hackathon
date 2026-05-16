@@ -1,9 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import App from "./App";
 
 describe("App", () => {
   beforeEach(() => {
     localStorage.clear();
+    Object.defineProperty(globalThis, "crypto", {
+      configurable: true,
+      value: {
+        randomUUID: jest.fn(() => "00000000-0000-4000-8000-000000000001"),
+      },
+    });
   });
 
   it("renders the onboarding screen on first visit", () => {
@@ -14,5 +20,18 @@ describe("App", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/display name/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /start browsing/i })).toBeInTheDocument();
+  });
+
+  it("stores a display name and shows the project board after onboarding", () => {
+    render(<App />);
+
+    fireEvent.change(screen.getByLabelText(/display name/i), { target: { value: "Grace Hopper" } });
+    fireEvent.click(screen.getByRole("button", { name: /start browsing/i }));
+
+    expect(
+      screen.getByRole("heading", { name: /pick one project to work on/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Grace Hopper")).toBeInTheDocument();
+    expect(localStorage.getItem("hackathon.identity")).toContain("Grace Hopper");
   });
 });
