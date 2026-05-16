@@ -1,4 +1,14 @@
-import { FormEvent, MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Component,
+  FormEvent,
+  MouseEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { BrowserRouter, Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import {
   giveUpProject,
   joinProject,
@@ -13,16 +23,23 @@ import {
 import type { Identity, ProjectCard, ProjectDetails } from "./types";
 
 const PAGE_SIZE = 6;
-const initialIdentity = loadIdentity();
 
 export default function App() {
-  const [identity, setIdentity] = useState<Identity | null>(initialIdentity);
-  const [projectCards, setProjectCards] = useState<ProjectCard[]>(() =>
-    initialIdentity ? loadProjectCards(initialIdentity) : [],
+  return (
+    <BrowserRouter>
+      <HackathonApp />
+    </BrowserRouter>
   );
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+}
+
+function HackathonApp() {
+  const navigate = useNavigate();
+  const [identity, setIdentity] = useState<Identity | null>(() => loadIdentity());
+  const [projectCards, setProjectCards] = useState<ProjectCard[]>(() =>
+    loadIdentity() ? loadProjectCards(loadIdentity() as Identity) : [],
+  );
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(() =>
-    initialIdentity ? loadCurrentProjectId(initialIdentity) : null,
+    loadIdentity() ? loadCurrentProjectId(loadIdentity() as Identity) : null,
   );
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [proposalMessage, setProposalMessage] = useState<string | null>(null);
@@ -31,8 +48,6 @@ export default function App() {
     () => projectCards.slice(0, visibleCount),
     [projectCards, visibleCount],
   );
-  const selectedProject =
-    identity && selectedProjectId ? loadProjectDetails(selectedProjectId, identity) : null;
 
   function refresh(nextIdentity = identity) {
     if (!nextIdentity) {
@@ -47,6 +62,7 @@ export default function App() {
     const nextIdentity = saveIdentity(displayName);
     setIdentity(nextIdentity);
     refresh(nextIdentity);
+    void navigate("/");
   }
 
   function handleRename(displayName: string) {
@@ -65,8 +81,8 @@ export default function App() {
     }
 
     joinProject(identity, projectId);
-    setSelectedProjectId(projectId);
     refresh();
+    void navigate(`/project/${projectId}`);
   }
 
   function handleGiveUp() {
@@ -93,41 +109,227 @@ export default function App() {
     <main className="app-shell">
       <Hero identity={identity} onRename={handleRename} />
 
-      <section className="layout-grid" aria-label="Hackathon projects">
-        <div className="project-column">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Project Board</p>
-              <h2>Pick one project to work on</h2>
-            </div>
-            <p className="muted">{projectCards.length} approved projects</p>
-          </div>
-
-          <ProjectList
-            projects={visibleProjects}
-            totalCount={projectCards.length}
-            currentProjectId={currentProjectId}
-            onSelect={setSelectedProjectId}
-            onJoin={handleJoin}
-            onGiveUp={handleGiveUp}
-            onLoadMore={() =>
-              setVisibleCount((count) => Math.min(count + PAGE_SIZE, projectCards.length))
+      <ErrorBoundary>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProjectBoard
+                projects={visibleProjects}
+                totalCount={projectCards.length}
+                currentProjectId={currentProjectId}
+                selectedProject={null}
+                proposalMessage={proposalMessage}
+                showProposal={false}
+                onSelect={(projectId) => {
+                  void navigate(`/project/${projectId}`);
+                }}
+                onJoin={handleJoin}
+                onGiveUp={handleGiveUp}
+                onLoadMore={() =>
+                  setVisibleCount((count) => Math.min(count + PAGE_SIZE, projectCards.length))
+                }
+                onProposal={handleProposal}
+              />
             }
           />
-        </div>
-
-        <aside className="side-panel" aria-label="Project details and proposals">
-          <ProjectDetailsPanel
-            project={selectedProject}
-            currentProjectId={currentProjectId}
-            onJoin={handleJoin}
-            onGiveUp={handleGiveUp}
+          <Route
+            path="/project/:projectId"
+            element={
+              <ProjectRoute
+                identity={identity}
+                projects={visibleProjects}
+                totalCount={projectCards.length}
+                currentProjectId={currentProjectId}
+                proposalMessage={proposalMessage}
+                onSelect={(projectId) => {
+                  void navigate(`/project/${projectId}`);
+                }}
+                onJoin={handleJoin}
+                onGiveUp={handleGiveUp}
+                onLoadMore={() =>
+                  setVisibleCount((count) => Math.min(count + PAGE_SIZE, projectCards.length))
+                }
+                onProposal={handleProposal}
+              />
+            }
           />
-          <ProposalForm onSubmit={handleProposal} message={proposalMessage} />
-        </aside>
-      </section>
+          <Route
+            path="/propose"
+            element={
+              <ProjectBoard
+                projects={visibleProjects}
+                totalCount={projectCards.length}
+                currentProjectId={currentProjectId}
+                selectedProject={null}
+                proposalMessage={proposalMessage}
+                showProposal
+                onSelect={(projectId) => {
+                  void navigate(`/project/${projectId}`);
+                }}
+                onJoin={handleJoin}
+                onGiveUp={handleGiveUp}
+                onLoadMore={() =>
+                  setVisibleCount((count) => Math.min(count + PAGE_SIZE, projectCards.length))
+                }
+                onProposal={handleProposal}
+              />
+            }
+          />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </ErrorBoundary>
     </main>
   );
+}
+
+function ProjectRoute({
+  identity,
+  projects,
+  totalCount,
+  currentProjectId,
+  proposalMessage,
+  onSelect,
+  onJoin,
+  onGiveUp,
+  onLoadMore,
+  onProposal,
+}: {
+  identity: Identity;
+  projects: ProjectCard[];
+  totalCount: number;
+  currentProjectId: string | null;
+  proposalMessage: string | null;
+  onSelect: (projectId: string) => void;
+  onJoin: (projectId: string) => void;
+  onGiveUp: () => void;
+  onLoadMore: () => void;
+  onProposal: (title: string, shortDescription: string) => void;
+}) {
+  const { projectId } = useParams();
+  const selectedProject = projectId ? loadProjectDetails(projectId, identity) : null;
+
+  return (
+    <ProjectBoard
+      projects={projects}
+      totalCount={totalCount}
+      currentProjectId={currentProjectId}
+      selectedProject={selectedProject}
+      proposalMessage={proposalMessage}
+      showProposal={false}
+      onSelect={onSelect}
+      onJoin={onJoin}
+      onGiveUp={onGiveUp}
+      onLoadMore={onLoadMore}
+      onProposal={onProposal}
+    />
+  );
+}
+
+function ProjectBoard({
+  projects,
+  totalCount,
+  currentProjectId,
+  selectedProject,
+  proposalMessage,
+  showProposal,
+  onSelect,
+  onJoin,
+  onGiveUp,
+  onLoadMore,
+  onProposal,
+}: {
+  projects: ProjectCard[];
+  totalCount: number;
+  currentProjectId: string | null;
+  selectedProject: ProjectDetails | null;
+  proposalMessage: string | null;
+  showProposal: boolean;
+  onSelect: (projectId: string) => void;
+  onJoin: (projectId: string) => void;
+  onGiveUp: () => void;
+  onLoadMore: () => void;
+  onProposal: (title: string, shortDescription: string) => void;
+}) {
+  return (
+    <section className="layout-grid" aria-label="Hackathon projects">
+      <div className="project-column">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Project Board</p>
+            <h2>Pick one project to work on</h2>
+          </div>
+          <p className="muted">{totalCount} approved projects</p>
+        </div>
+
+        <ProjectList
+          projects={projects}
+          totalCount={totalCount}
+          currentProjectId={currentProjectId}
+          onSelect={onSelect}
+          onJoin={onJoin}
+          onGiveUp={onGiveUp}
+          onLoadMore={onLoadMore}
+        />
+      </div>
+
+      <aside className="side-panel" aria-label="Project details and proposals">
+        {showProposal ? (
+          <ProposalForm onSubmit={onProposal} message={proposalMessage} />
+        ) : (
+          <>
+            <ProjectDetailsPanel
+              project={selectedProject}
+              currentProjectId={currentProjectId}
+              onJoin={onJoin}
+              onGiveUp={onGiveUp}
+            />
+            <Link className="panel-link" to="/propose">
+              Propose a new project
+            </Link>
+          </>
+        )}
+      </aside>
+    </section>
+  );
+}
+
+function NotFoundPage() {
+  return (
+    <section className="panel empty-panel">
+      <p className="eyebrow">Not Found</p>
+      <h2>That page does not exist</h2>
+      <p>Return to the project board to keep browsing available hackathon ideas.</p>
+      <Link className="panel-link" to="/">
+        Back to project board
+      </Link>
+    </section>
+  );
+}
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <section className="panel empty-panel" role="alert">
+          <p className="eyebrow">Something went wrong</p>
+          <h2>Unable to render this view</h2>
+          <p>Return to the project board and try again.</p>
+          <Link className="panel-link" to="/">
+            Back to project board
+          </Link>
+        </section>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 function Onboarding({ onStart }: { onStart: (displayName: string) => void }) {

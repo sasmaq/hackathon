@@ -322,6 +322,25 @@ label {
   padding: 24px;
 }
 
+.app-shell > .panel {
+  margin-top: 24px;
+}
+
+.panel-link {
+  display: inline-flex;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #312e81;
+  font-weight: 800;
+  padding: 0.82rem 1.1rem;
+  text-decoration: none;
+}
+
+.panel-link:hover {
+  background: #c7d2fe;
+}
+
 .details-panel,
 .proposal-panel form {
   display: grid;

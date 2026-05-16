@@ -1,6 +1,7 @@
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: "jsdom",
+  setupFiles: ["<rootDir>/src/test/polyfills.cjs"],
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
   testMatch: ["<rootDir>/src/**/*.test.ts?(x)"],
   transform: {

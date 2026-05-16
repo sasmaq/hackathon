@@ -47,9 +47,9 @@ For every item:
 ## 5. App Shell and Routing (Mocked)
 
 - [x] Add app layout (header, content container)
-- [ ] Add routes: `/` (Project List), `/project/:id` (Details), `/propose` (Propose)
+- [x] Add routes: `/` (Project List), `/project/:id` (Details), `/propose` (Propose)
 - [x] Add theme/tokens and basic global styles
-- [ ] Add error boundary and 404 route
+- [x] Add error boundary and 404 route
 
 ## 6. Testing Foundations
 
