@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AI Coding Hackathon">
+  <rect width="64" height="64" rx="16" fill="#4f46e5" />
+  <path
+    d="M18 24 10 32l8 8M46 24l8 8-8 8"
+    fill="none"
+    stroke="#ffffff"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="5"
+  />
+  <path
+    d="m28 44 8-24"
+    fill="none"
+    stroke="#facc15"
+    stroke-linecap="round"
+    stroke-width="5"
+  />
+  <circle cx="47" cy="17" r="5" fill="#22c55e" />
+</svg>
