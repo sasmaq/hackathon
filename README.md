@@ -4,6 +4,12 @@ A small React + TypeScript app for hackathon participants to browse AI coding pr
 
 ## Run Locally
 
+Use Node.js 24:
+
+```bash
+nvm use
+```
+
 ```bash
 npm install
 npm run dev
