@@ -317,7 +317,7 @@ function ProjectCardView({
         {project.isSignedUp ? <strong>Your project</strong> : null}
       </div>
       <h3>{project.title}</h3>
-      <p>{project.shortDescription}</p>
+      <p className="project-description">{project.shortDescription}</p>
       <ParticipantPreview project={project} />
       <div className="card-actions">
         <button type="button" className="secondary" onClick={() => onSelect(project.id)}>

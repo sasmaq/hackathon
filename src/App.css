@@ -239,10 +239,25 @@ label {
 }
 
 .project-card h3 {
+  flex: 0 0 2rem;
+  height: 2rem;
+  max-height: 2rem;
   margin: 0;
+  overflow-y: auto;
+  padding-right: 0.25rem;
   color: #111827;
   font-size: 1.35rem;
   letter-spacing: -0.03em;
+  line-height: 1.45;
+}
+
+.project-description {
+  flex: 0 0 4.8rem;
+  height: 4.8rem;
+  max-height: 4.8rem;
+  margin: 0;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 .card-topline {
