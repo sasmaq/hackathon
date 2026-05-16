@@ -8,70 +8,80 @@ const seedProjects: Project[] = [
   {
     id: "ai-review-bot",
     title: "AI Pull Request Review Bot",
-    shortDescription: "Build an assistant that summarizes code changes and flags risky diffs before review.",
+    shortDescription:
+      "Build an assistant that summarizes code changes and flags risky diffs before review.",
     status: "approved",
     createdAt: "2026-05-16T07:00:00.000Z",
   },
   {
     id: "meeting-to-issues",
     title: "Meeting Notes to GitHub Issues",
-    shortDescription: "Turn transcript snippets into scoped engineering issues with owners and acceptance criteria.",
+    shortDescription:
+      "Turn transcript snippets into scoped engineering issues with owners and acceptance criteria.",
     status: "approved",
     createdAt: "2026-05-16T06:45:00.000Z",
   },
   {
     id: "test-case-generator",
     title: "Edge Case Test Generator",
-    shortDescription: "Analyze functions and propose high-signal unit tests for branches people usually miss.",
+    shortDescription:
+      "Analyze functions and propose high-signal unit tests for branches people usually miss.",
     status: "approved",
     createdAt: "2026-05-16T06:30:00.000Z",
   },
   {
     id: "docs-chat",
     title: "Internal Docs Chat",
-    shortDescription: "Prototype a retrieval assistant that answers questions from a small documentation corpus.",
+    shortDescription:
+      "Prototype a retrieval assistant that answers questions from a small documentation corpus.",
     status: "approved",
     createdAt: "2026-05-16T06:15:00.000Z",
   },
   {
     id: "bug-repro-agent",
     title: "Bug Reproduction Agent",
-    shortDescription: "Create a tool that turns a bug report into a minimal repro script and debugging checklist.",
+    shortDescription:
+      "Create a tool that turns a bug report into a minimal repro script and debugging checklist.",
     status: "approved",
     createdAt: "2026-05-16T06:00:00.000Z",
   },
   {
     id: "design-to-ui",
     title: "Design Prompt to UI",
-    shortDescription: "Generate accessible React component drafts from plain-language product requirements.",
+    shortDescription:
+      "Generate accessible React component drafts from plain-language product requirements.",
     status: "approved",
     createdAt: "2026-05-16T05:45:00.000Z",
   },
   {
     id: "sql-explainer",
     title: "SQL Query Explainer",
-    shortDescription: "Explain complex SQL, highlight performance risks, and suggest safer alternatives.",
+    shortDescription:
+      "Explain complex SQL, highlight performance risks, and suggest safer alternatives.",
     status: "approved",
     createdAt: "2026-05-16T05:30:00.000Z",
   },
   {
     id: "incident-timeline",
     title: "Incident Timeline Builder",
-    shortDescription: "Transform logs and notes into a clear timeline with suspected causes and next actions.",
+    shortDescription:
+      "Transform logs and notes into a clear timeline with suspected causes and next actions.",
     status: "approved",
     createdAt: "2026-05-16T05:15:00.000Z",
   },
   {
     id: "accessibility-copilot",
     title: "Accessibility Copilot",
-    shortDescription: "Scan UI snippets and recommend practical fixes for keyboard, contrast, and screen reader gaps.",
+    shortDescription:
+      "Scan UI snippets and recommend practical fixes for keyboard, contrast, and screen reader gaps.",
     status: "approved",
     createdAt: "2026-05-16T05:00:00.000Z",
   },
   {
     id: "prompt-regression-suite",
     title: "Prompt Regression Suite",
-    shortDescription: "Compare prompt versions against saved examples and show where model behavior changed.",
+    shortDescription:
+      "Compare prompt versions against saved examples and show where model behavior changed.",
     status: "approved",
     createdAt: "2026-05-16T04:45:00.000Z",
   },
@@ -179,7 +189,10 @@ function buildProjectCard(project: Project, signups: Signup[], clientId: string)
     ...project,
     signupCount: participantNames.length,
     participantNamesPreview,
-    remainingParticipantCount: Math.max(participantNames.length - participantNamesPreview.length, 0),
+    remainingParticipantCount: Math.max(
+      participantNames.length - participantNamesPreview.length,
+      0,
+    ),
     isSignedUp: projectSignups.some((signup) => signup.clientId === clientId),
   };
 }

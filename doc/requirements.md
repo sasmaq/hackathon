@@ -25,12 +25,12 @@ An ultra-simple web app that lets hackathon participants discover available codi
 
 ### Core Experience
 
-1) Browse projects as cards with infinite scroll.
-2) View project details page with description and participant list/count.
-3) Join exactly one project at a time (auto-accept).
-4) Switch to a different project or give up current selection at any time.
-5) Propose a new project idea for others to join (manual review required to publish).
-6) Simple onboarding: enter display name to start (stored in localStorage).
+1. Browse projects as cards with infinite scroll.
+2. View project details page with description and participant list/count.
+3. Join exactly one project at a time (auto-accept).
+4. Switch to a different project or give up current selection at any time.
+5. Propose a new project idea for others to join (manual review required to publish).
+6. Simple onboarding: enter display name to start (stored in localStorage).
 
 ### Discovery and Cards
 
@@ -44,13 +44,13 @@ An ultra-simple web app that lets hackathon participants discover available codi
 
 Reference fields (as specified):
 
-| Field | Displayed on Card | Source | Purpose |
-| --- | --- | --- | --- |
-| id | No | Database (projects.id) | Internal identification |
-| title | Yes | Database (projects.title) | Card header |
-| shortDescription | Yes | Database (projects.short_description) | Description text |
-| signupCount | Yes | Calculated (RPC function) | Participant count |
-| isSignedUp | No (affects styling) | Calculated (user's signups) | Border highlight and badge |
+| Field            | Displayed on Card    | Source                                | Purpose                    |
+| ---------------- | -------------------- | ------------------------------------- | -------------------------- |
+| id               | No                   | Database (projects.id)                | Internal identification    |
+| title            | Yes                  | Database (projects.title)             | Card header                |
+| shortDescription | Yes                  | Database (projects.short_description) | Description text           |
+| signupCount      | Yes                  | Calculated (RPC function)             | Participant count          |
+| isSignedUp       | No (affects styling) | Calculated (user's signups)           | Border highlight and badge |
 
 Note: Participant names are also displayed on cards (derived from signups), even though not listed as a field above; they are not stored as a separate field.
 
@@ -142,7 +142,7 @@ Note: Participant names are also displayed on cards (derived from signups), even
 
 ### Tables
 
-1) participants
+1. participants
 
 ```
 id uuid primary key default gen_random_uuid(),
@@ -151,7 +151,7 @@ client_id uuid not null unique, -- stored in localStorage (browser)
 created_at timestamptz not null default now()
 ```
 
-2) projects
+2. projects
 
 ```
 id uuid primary key default gen_random_uuid(),
@@ -161,7 +161,7 @@ status text not null default 'pending' check (status in ('pending','approved','r
 created_at timestamptz not null default now()
 ```
 
-3) signups
+3. signups
 
 ```
 participant_id uuid not null references participants(id) on delete cascade,
@@ -266,27 +266,27 @@ Note: `participant_names_preview` can be expanded to full lists in the details v
 
 ## User Flows
 
-1) First-time user
+1. First-time user
 
 - Land → Prompt for display name → Save to localStorage (and generate client_id) → Show project list (page 1)
 
-2) Browse and view details
+2. Browse and view details
 
 - Scroll to load more → Click a card → See details with full participant list → Back to list
 
-3) Join a project (not signed up yet)
+3. Join a project (not signed up yet)
 
 - Details or card CTA → Create/ensure participant by client_id → Insert signup → Refresh details and card list → Card shows highlight badge
 
-4) Switch projects (already signed up)
+4. Switch projects (already signed up)
 
 - Details or card CTA on another project → Delete existing signup → Insert new signup → Refresh new/old cards and details
 
-5) Give up
+5. Give up
 
 - Details or card CTA → Delete signup → Refresh list/details → No project highlighted
 
-6) Propose project
+6. Propose project
 
 - Open “Propose” → Enter title and shortDescription → Submit → Project created as pending → Not visible in list until approved via backend
 

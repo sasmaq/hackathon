@@ -13,12 +13,17 @@ import {
 import type { Identity, ProjectCard, ProjectDetails } from "./types";
 
 const PAGE_SIZE = 6;
+const initialIdentity = loadIdentity();
 
 export default function App() {
-  const [identity, setIdentity] = useState<Identity | null>(() => loadIdentity());
-  const [projectCards, setProjectCards] = useState<ProjectCard[]>([]);
+  const [identity, setIdentity] = useState<Identity | null>(initialIdentity);
+  const [projectCards, setProjectCards] = useState<ProjectCard[]>(() =>
+    initialIdentity ? loadProjectCards(initialIdentity) : [],
+  );
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(() =>
+    initialIdentity ? loadCurrentProjectId(initialIdentity) : null,
+  );
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [proposalMessage, setProposalMessage] = useState<string | null>(null);
 
@@ -26,13 +31,8 @@ export default function App() {
     () => projectCards.slice(0, visibleCount),
     [projectCards, visibleCount],
   );
-  const selectedProject = useMemo(
-    () =>
-      identity && selectedProjectId
-        ? loadProjectDetails(selectedProjectId, identity)
-        : null,
-    [identity, selectedProjectId, projectCards],
-  );
+  const selectedProject =
+    identity && selectedProjectId ? loadProjectDetails(selectedProjectId, identity) : null;
 
   function refresh(nextIdentity = identity) {
     if (!nextIdentity) {
@@ -42,10 +42,6 @@ export default function App() {
     setProjectCards(loadProjectCards(nextIdentity));
     setCurrentProjectId(loadCurrentProjectId(nextIdentity));
   }
-
-  useEffect(() => {
-    refresh();
-  }, [identity]);
 
   function handleStart(displayName: string) {
     const nextIdentity = saveIdentity(displayName);
@@ -84,7 +80,9 @@ export default function App() {
 
   function handleProposal(title: string, shortDescription: string) {
     proposeProject(title, shortDescription);
-    setProposalMessage("Thanks. Your project idea is pending manual review before it appears here.");
+    setProposalMessage(
+      "Thanks. Your project idea is pending manual review before it appears here.",
+    );
   }
 
   if (!identity) {
@@ -149,9 +147,7 @@ function Onboarding({ onStart }: { onStart: (displayName: string) => void }) {
       <form className="onboarding-card" onSubmit={handleSubmit}>
         <p className="eyebrow">AI Coding Hackathon</p>
         <h1>What should other participants call you?</h1>
-        <p>
-          Enter a display name to browse projects, join one team, and propose new ideas.
-        </p>
+        <p>Enter a display name to browse projects, join one team, and propose new ideas.</p>
         <label htmlFor="display-name">Display name</label>
         <input
           id="display-name"
@@ -192,8 +188,7 @@ function Hero({
         <p className="eyebrow">AI Coding Hackathon</p>
         <h1>Find a project, join a crew, ship something useful.</h1>
         <p>
-          Browse approved ideas, see who has joined, and switch projects whenever your
-          plan changes.
+          Browse approved ideas, see who has joined, and switch projects whenever your plan changes.
         </p>
       </div>
       <form className="identity-card" onSubmit={handleSubmit}>
@@ -292,11 +287,7 @@ function ProjectCardView({
   onGiveUp: () => void;
 }) {
   const isCurrent = project.id === currentProjectId;
-  const ctaLabel = isCurrent
-    ? "Give up"
-    : currentProjectId
-      ? "Switch here"
-      : "Join project";
+  const ctaLabel = isCurrent ? "Give up" : currentProjectId ? "Switch here" : "Join project";
 
   function handleCta(event: MouseEvent<HTMLButtonElement>) {
     event.stopPropagation();
@@ -472,7 +463,11 @@ function ProposalForm({
         />
 
         <button type="submit">Submit for review</button>
-        {message ? <p className="success-message" role="status">{message}</p> : null}
+        {message ? (
+          <p className="success-message" role="status">
+            {message}
+          </p>
+        ) : null}
       </form>
     </section>
   );

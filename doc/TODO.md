@@ -12,7 +12,7 @@ For every item:
 - [x] Add basic app shell
 - [x] Commit lockfile and add `.gitignore`
 - [x] Add minimal README (run, build, deploy)
-- [ ] Add ESLint (typescript, react hooks) and Prettier with scripts
+- [x] Add ESLint (typescript, react hooks) and Prettier with scripts
 - [x] Enable TypeScript strict mode
 
 ## 2. CI Pipeline
