@@ -24,3 +24,7 @@ pnpm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# Playwright artifacts
+playwright-report/
+test-results/

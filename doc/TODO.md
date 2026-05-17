@@ -53,9 +53,9 @@ For every item:
 
 ## 6. Testing Foundations
 
-- [ ] Install Playwright and browsers
-- [ ] First E2E: app renders at `/`
-- [ ] Wire Playwright to CI (allow failure initially if flaky)
+- [x] Install Playwright and browsers
+- [x] First E2E: app renders at `/`
+- [x] Wire Playwright to CI (allow failure initially if flaky)
 
 ## 7. Identity (localStorage)
 

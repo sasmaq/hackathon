@@ -25,6 +25,22 @@ npm run build
 
 The production build is written to `dist/`.
 
+## End-to-End Tests (Playwright)
+
+Install the Playwright browser once:
+
+```bash
+npx playwright install chromium
+```
+
+Run E2E tests:
+
+```bash
+npm run test:e2e
+```
+
+Playwright starts the app automatically and runs a smoke test against `/`.
+
 ## Deploy
 
 Deploy the `dist/` folder to any static host. For Netlify, use:
