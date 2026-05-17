@@ -84,9 +84,9 @@ For every item:
 
 ## 11. Component and Unit Tests Expansion (Mocked)
 
-- [ ] Tests: `ProjectCard` renders fields and chips
-- [ ] Tests: name prompt stores localStorage values
-- [ ] Tests: infinite scroll appends items
+- [x] Tests: `ProjectCard` renders fields and chips
+- [x] Tests: name prompt stores localStorage values
+- [x] Tests: infinite scroll appends items
 
 ## 12. Database Setup (Postgres)
 
