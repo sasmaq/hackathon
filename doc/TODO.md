@@ -74,7 +74,7 @@ For every item:
 
 - [x] Build details page (title, short description, full participant list)
 - [x] Contextual CTA: Join / Switch / Give up (mocked state)
-- [ ] Empty states and loading placeholders
+- [x] Empty states and loading placeholders
 
 ## 10. Propose Project (Mocked)
 

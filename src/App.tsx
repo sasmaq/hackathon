@@ -35,33 +35,79 @@ export default function App() {
 function HackathonApp() {
   const navigate = useNavigate();
   const [identity, setIdentity] = useState<Identity | null>(() => loadIdentity());
-  const [projectCards, setProjectCards] = useState<ProjectCard[]>(() =>
-    loadIdentity() ? loadProjectCards(loadIdentity() as Identity) : [],
-  );
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(() =>
-    loadIdentity() ? loadCurrentProjectId(loadIdentity() as Identity) : null,
-  );
+  const [projectCards, setProjectCards] = useState<ProjectCard[]>([]);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [isProjectsLoading, setIsProjectsLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [proposalMessage, setProposalMessage] = useState<string | null>(null);
+  const refreshTimeoutRef = useRef<number | null>(null);
 
   const visibleProjects = useMemo(
     () => projectCards.slice(0, visibleCount),
     [projectCards, visibleCount],
   );
 
-  function refresh(nextIdentity = identity) {
+  function refresh(nextIdentity = identity, withLoadingPlaceholder = false) {
     if (!nextIdentity) {
       return;
     }
 
-    setProjectCards(loadProjectCards(nextIdentity));
-    setCurrentProjectId(loadCurrentProjectId(nextIdentity));
+    if (refreshTimeoutRef.current) {
+      window.clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = null;
+    }
+
+    const applyRefresh = () => {
+      setProjectCards(loadProjectCards(nextIdentity));
+      setCurrentProjectId(loadCurrentProjectId(nextIdentity));
+      setIsProjectsLoading(false);
+    };
+
+    if (!withLoadingPlaceholder) {
+      applyRefresh();
+      return;
+    }
+
+    setIsProjectsLoading(true);
+    refreshTimeoutRef.current = window.setTimeout(() => {
+      applyRefresh();
+      refreshTimeoutRef.current = null;
+    }, 180);
   }
+
+  useEffect(() => {
+    if (!identity) {
+      setProjectCards([]);
+      setCurrentProjectId(null);
+      setIsProjectsLoading(false);
+      return;
+    }
+
+    refresh(identity, true);
+    return () => {
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current);
+        refreshTimeoutRef.current = null;
+      }
+    };
+  }, [identity?.clientId]);
+
+  useEffect(
+    () => () => {
+      if (refreshTimeoutRef.current) {
+        window.clearTimeout(refreshTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [projectCards.length]);
 
   function handleStart(displayName: string) {
     const nextIdentity = saveIdentity(displayName);
     setIdentity(nextIdentity);
-    refresh(nextIdentity);
     void navigate("/");
   }
 
@@ -72,7 +118,7 @@ function HackathonApp() {
 
     const nextIdentity = updateDisplayName(identity, displayName);
     setIdentity(nextIdentity);
-    refresh(nextIdentity);
+    refresh(nextIdentity, true);
   }
 
   function handleJoin(projectId: string) {
@@ -81,7 +127,7 @@ function HackathonApp() {
     }
 
     joinProject(identity, projectId);
-    refresh();
+    refresh(identity, true);
     void navigate(`/project/${projectId}`);
   }
 
@@ -91,7 +137,7 @@ function HackathonApp() {
     }
 
     giveUpProject(identity);
-    refresh();
+    refresh(identity, true);
   }
 
   function handleProposal(title: string, shortDescription: string) {
@@ -117,8 +163,11 @@ function HackathonApp() {
               <ProjectBoard
                 projects={visibleProjects}
                 totalCount={projectCards.length}
+                isProjectsLoading={isProjectsLoading}
                 currentProjectId={currentProjectId}
                 selectedProject={null}
+                isDetailsLoading={false}
+                hasRequestedProject={false}
                 proposalMessage={proposalMessage}
                 showProposal={false}
                 onSelect={(projectId) => {
@@ -140,6 +189,7 @@ function HackathonApp() {
                 identity={identity}
                 projects={visibleProjects}
                 totalCount={projectCards.length}
+                isProjectsLoading={isProjectsLoading}
                 currentProjectId={currentProjectId}
                 proposalMessage={proposalMessage}
                 onSelect={(projectId) => {
@@ -160,8 +210,11 @@ function HackathonApp() {
               <ProjectBoard
                 projects={visibleProjects}
                 totalCount={projectCards.length}
+                isProjectsLoading={isProjectsLoading}
                 currentProjectId={currentProjectId}
                 selectedProject={null}
+                isDetailsLoading={false}
+                hasRequestedProject={false}
                 proposalMessage={proposalMessage}
                 showProposal
                 onSelect={(projectId) => {
@@ -187,6 +240,7 @@ function ProjectRoute({
   identity,
   projects,
   totalCount,
+  isProjectsLoading,
   currentProjectId,
   proposalMessage,
   onSelect,
@@ -198,6 +252,7 @@ function ProjectRoute({
   identity: Identity;
   projects: ProjectCard[];
   totalCount: number;
+  isProjectsLoading: boolean;
   currentProjectId: string | null;
   proposalMessage: string | null;
   onSelect: (projectId: string) => void;
@@ -208,13 +263,28 @@ function ProjectRoute({
 }) {
   const { projectId } = useParams();
   const selectedProject = projectId ? loadProjectDetails(projectId, identity) : null;
+  const [isDetailsLoading, setIsDetailsLoading] = useState(Boolean(projectId));
+
+  useEffect(() => {
+    if (!projectId) {
+      setIsDetailsLoading(false);
+      return;
+    }
+
+    setIsDetailsLoading(true);
+    const timer = window.setTimeout(() => setIsDetailsLoading(false), 180);
+    return () => window.clearTimeout(timer);
+  }, [identity.clientId, projectId]);
 
   return (
     <ProjectBoard
       projects={projects}
       totalCount={totalCount}
+      isProjectsLoading={isProjectsLoading}
       currentProjectId={currentProjectId}
       selectedProject={selectedProject}
+      isDetailsLoading={isDetailsLoading}
+      hasRequestedProject={Boolean(projectId)}
       proposalMessage={proposalMessage}
       showProposal={false}
       onSelect={onSelect}
@@ -229,8 +299,11 @@ function ProjectRoute({
 function ProjectBoard({
   projects,
   totalCount,
+  isProjectsLoading,
   currentProjectId,
   selectedProject,
+  isDetailsLoading,
+  hasRequestedProject,
   proposalMessage,
   showProposal,
   onSelect,
@@ -241,8 +314,11 @@ function ProjectBoard({
 }: {
   projects: ProjectCard[];
   totalCount: number;
+  isProjectsLoading: boolean;
   currentProjectId: string | null;
   selectedProject: ProjectDetails | null;
+  isDetailsLoading: boolean;
+  hasRequestedProject: boolean;
   proposalMessage: string | null;
   showProposal: boolean;
   onSelect: (projectId: string) => void;
@@ -265,6 +341,7 @@ function ProjectBoard({
         <ProjectList
           projects={projects}
           totalCount={totalCount}
+          isLoading={isProjectsLoading}
           currentProjectId={currentProjectId}
           onSelect={onSelect}
           onJoin={onJoin}
@@ -279,6 +356,8 @@ function ProjectBoard({
         ) : (
           <>
             <ProjectDetailsPanel
+              isLoading={isDetailsLoading}
+              hasRequestedProject={hasRequestedProject}
               project={selectedProject}
               currentProjectId={currentProjectId}
               onJoin={onJoin}
@@ -412,6 +491,7 @@ function Hero({
 function ProjectList({
   projects,
   totalCount,
+  isLoading,
   currentProjectId,
   onSelect,
   onJoin,
@@ -420,6 +500,7 @@ function ProjectList({
 }: {
   projects: ProjectCard[];
   totalCount: number;
+  isLoading: boolean;
   currentProjectId: string | null;
   onSelect: (projectId: string) => void;
   onJoin: (projectId: string) => void;
@@ -449,8 +530,36 @@ function ProjectList({
 
   return (
     <>
+      {isLoading ? (
+        <div className="cards-grid loading-grid" aria-label="Loading projects">
+          {Array.from({ length: PAGE_SIZE }).map((_, index) => (
+            <article className="project-card skeleton-card" key={`skeleton-${index}`} aria-hidden="true">
+              <div className="skeleton-line skeleton-short" />
+              <div className="skeleton-line skeleton-title" />
+              <div className="skeleton-line skeleton-body" />
+              <div className="skeleton-line skeleton-body" />
+              <div className="skeleton-chip-row">
+                <span />
+                <span />
+                <span />
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : null}
+      {!isLoading && totalCount === 0 ? (
+        <section className="panel empty-panel">
+          <p className="eyebrow">Project Board</p>
+          <h3>No approved projects yet</h3>
+          <p>
+            New project proposals stay hidden until manual review. Check back after a project is
+            approved.
+          </p>
+        </section>
+      ) : null}
       <div className="cards-grid">
-        {projects.map((project) => (
+        {!isLoading &&
+          projects.map((project) => (
           <ProjectCardView
             key={project.id}
             project={project}
@@ -459,17 +568,18 @@ function ProjectList({
             onJoin={onJoin}
             onGiveUp={onGiveUp}
           />
-        ))}
+          ))}
       </div>
 
       <div className="load-more" ref={sentinelRef}>
+        {isLoading ? <span>Loading projects...</span> : null}
         {hasMore ? (
-          <button type="button" onClick={onLoadMore}>
+          <button type="button" onClick={onLoadMore} disabled={isLoading}>
             Load more projects
           </button>
-        ) : (
+        ) : !isLoading ? (
           <span>All approved projects are visible.</span>
-        )}
+        ) : null}
       </div>
     </>
   );
@@ -551,16 +661,45 @@ function ParticipantPreview({ project }: { project: ProjectCard }) {
 }
 
 function ProjectDetailsPanel({
+  isLoading,
+  hasRequestedProject,
   project,
   currentProjectId,
   onJoin,
   onGiveUp,
 }: {
+  isLoading: boolean;
+  hasRequestedProject: boolean;
   project: ProjectDetails | null;
   currentProjectId: string | null;
   onJoin: (projectId: string) => void;
   onGiveUp: () => void;
 }) {
+  if (isLoading) {
+    return (
+      <section className="panel details-panel details-loading" aria-busy="true" aria-live="polite">
+        <p className="eyebrow">Project Details</p>
+        <div className="skeleton-line skeleton-title" />
+        <div className="skeleton-line skeleton-body" />
+        <div className="skeleton-line skeleton-body" />
+        <div className="metric-row skeleton-metric" />
+      </section>
+    );
+  }
+
+  if (hasRequestedProject && !project) {
+    return (
+      <section className="panel empty-panel">
+        <p className="eyebrow">Project Details</p>
+        <h2>Project unavailable</h2>
+        <p>This project was not found or is no longer approved for public browsing.</p>
+        <Link className="panel-link" to="/">
+          Back to project board
+        </Link>
+      </section>
+    );
+  }
+
   if (!project) {
     return (
       <section className="panel empty-panel">

@@ -76,3 +76,11 @@ test("unknown route shows not found screen", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /that page does not exist/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /back to project board/i })).toBeVisible();
 });
+
+test("unknown project route shows unavailable state", async ({ page }) => {
+  await bootstrapIdentity(page, "Barbara Liskov");
+  await page.goto("/project/not-an-approved-project");
+
+  await expect(page.getByRole("heading", { name: /project unavailable/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /back to project board/i })).toBeVisible();
+});

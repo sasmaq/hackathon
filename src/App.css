@@ -220,6 +220,51 @@ label {
   gap: 18px;
 }
 
+.loading-grid .skeleton-card {
+  pointer-events: none;
+}
+
+.skeleton-card {
+  border-style: dashed;
+}
+
+.skeleton-line {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 45%, #e2e8f0 100%);
+  background-size: 180% 100%;
+  animation: skeleton-pulse 1.15s ease-in-out infinite;
+}
+
+.skeleton-short {
+  width: 36%;
+  height: 0.72rem;
+}
+
+.skeleton-title {
+  width: 82%;
+  height: 1.4rem;
+}
+
+.skeleton-body {
+  width: 100%;
+  height: 0.86rem;
+}
+
+.skeleton-chip-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.skeleton-chip-row span {
+  width: 4.3rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 45%, #e2e8f0 100%);
+  background-size: 180% 100%;
+  animation: skeleton-pulse 1.15s ease-in-out infinite;
+}
+
 .project-card {
   display: flex;
   min-height: 315px;
@@ -347,6 +392,22 @@ label {
   gap: 1rem;
 }
 
+.details-loading .skeleton-title {
+  width: 90%;
+}
+
+.details-loading .skeleton-body {
+  width: 100%;
+}
+
+.skeleton-metric {
+  border: 0;
+  min-height: 88px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #f8fafc 45%, #e2e8f0 100%);
+  background-size: 180% 100%;
+  animation: skeleton-pulse 1.15s ease-in-out infinite;
+}
+
 .metric-row {
   display: flex;
   justify-content: space-between;
@@ -401,6 +462,16 @@ label {
 
 .empty-panel {
   min-height: 240px;
+}
+
+@keyframes skeleton-pulse {
+  from {
+    background-position: 160% 0;
+  }
+
+  to {
+    background-position: -20% 0;
+  }
 }
 
 .onboarding {

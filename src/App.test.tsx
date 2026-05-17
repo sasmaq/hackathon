@@ -36,7 +36,7 @@ describe("App", () => {
     expect(localStorage.getItem("hackathon.identity")).toContain("Grace Hopper");
   });
 
-  it("renders project details from the project route", () => {
+  it("renders project details from the project route", async () => {
     localStorage.setItem(
       "hackathon.identity",
       JSON.stringify({ clientId: "participant-1", displayName: "Grace Hopper" }),
@@ -45,8 +45,31 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(screen.getByText("Project Details")).toBeInTheDocument();
-    expect(screen.getAllByText("AI Pull Request Review Bot")).toHaveLength(2);
+    expect(await screen.findByText("Project Details")).toBeInTheDocument();
+    expect(await screen.findAllByText("AI Pull Request Review Bot")).toHaveLength(2);
+  });
+
+  it("shows an empty project list state when no approved projects exist", async () => {
+    localStorage.setItem(
+      "hackathon.identity",
+      JSON.stringify({ clientId: "participant-1", displayName: "Grace Hopper" }),
+    );
+    localStorage.setItem(
+      "hackathon.projects",
+      JSON.stringify([
+        {
+          id: "pending-only-project",
+          title: "Pending review",
+          shortDescription: "Not visible on board",
+          status: "pending",
+          createdAt: "2026-05-16T07:00:00.000Z",
+        },
+      ]),
+    );
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: /no approved projects yet/i })).toBeInTheDocument();
   });
 
   it("renders the proposal form from the propose route", () => {
