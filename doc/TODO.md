@@ -88,87 +88,97 @@ For every item:
 - [ ] Tests: name prompt stores localStorage values
 - [ ] Tests: infinite scroll appends items
 
-## 12. Supabase Project Setup
+## 12. Database Setup (Postgres)
 
-- [ ] Create Supabase project; store URL and anon key (local only)
-- [ ] Create tables: `participants`, `projects`, `signups`
-- [ ] Enable RLS on all tables
+- [ ] Add Docker Compose (or documented hosted Postgres) for local development
+- [ ] Create tables: `participants`, `projects`, `signups` (see PRD data model)
+- [ ] Add migration SQL under `server/db/migrations/` (or equivalent)
 - [ ] Seed a few `projects` (approved and pending)
-- [ ] SQL file(s) checked into `supabase/sql/`
-- [ ] Document moderation flow (approve via Supabase dashboard)
+- [ ] Document moderation flow (SQL, DB console, or admin API route)
 
-## 13. Local Dev: Supabase and Edge Functions
+## 13. Hono Server Scaffold
 
-- [ ] Install Supabase CLI and Docker
-- [ ] `supabase start` to run local Postgres and APIs
-- [ ] `supabase functions serve` for local Edge Functions
-- [ ] Add `.env.local` and map env to local services
+- [ ] Create `server/` with Hono and `@hono/node-server`
+- [ ] Add `GET /api/health` and shared error JSON shape `{ "error": "message" }`
+- [ ] Wire Postgres client (e.g. `postgres` or Drizzle) via `DATABASE_URL`
+- [ ] Add CORS for `http://localhost:5173` and production Netlify origin(s)
+- [ ] Add npm scripts: `dev:server`, `build:server` (as needed)
+- [ ] Document server env vars in README
+
+## 14. Local Dev: Full Stack
+
+- [ ] Start Postgres locally (`docker compose up`)
+- [ ] Run migrations against local DB
+- [ ] Run Vite and Hono concurrently for local development
+- [ ] Add `.env.local` (`VITE_API_URL`) and `server/.env` (`DATABASE_URL`, `CORS_ORIGIN`)
 - [ ] Docs: how to run full stack locally
 
-## 14. Supabase Environments (Preview + Prod)
+## 15. Environments (Preview + Prod)
 
-- [ ] Create preview and prod environments (separate projects or isolated DBs)
-- [ ] Configure Netlify contexts: Deploy Previews -> preview, Production -> prod
-- [ ] Store context-specific Supabase URL and anon key in Netlify
+- [ ] Provision preview and prod Postgres databases (or schemas)
+- [ ] Deploy Hono API to preview and production hosts; record API base URLs
+- [ ] Configure Netlify contexts: Deploy Previews → preview API, Production → prod API
+- [ ] Set `VITE_API_URL` per Netlify context; set `DATABASE_URL`, `CORS_ORIGIN`, optional `ADMIN_SECRET` on API host
 - [ ] Document environment strategy and migration flow
 
-## 15. RLS Policies (Minimum Viable)
+## 16. API Validation and Access Rules
 
-- [ ] `projects`: read approved only; insert allowed for pending
-- [ ] `participants`: allow insert; limit updates to minimal fields
-- [ ] `signups`: allow insert/delete; note impersonation risk (MVP)
-- [ ] Document limitations and future fix (Edge Functions or auth)
+- [ ] Resolve participant from `X-Client-Id` on protected routes
+- [ ] Public reads return only `approved` projects
+- [ ] Reject join/switch on non-approved projects; validate propose payload (length, no script tags)
+- [ ] Scope signup mutations to the resolved participant (note `client_id` impersonation risk for MVP)
+- [ ] Document limitations and future fix (session tokens or real auth)
 
-## 16. Edge Function: `get_project_cards`
+## 17. Hono Route: Project Cards and Details
 
-- [ ] Implement nested SQL returning id, title, short_description, signup_count, participant_names_preview, is_signed_up
-- [ ] Verify pagination (limit, offset) and ordering (created_at desc)
-- [ ] Add function code and SQL to repo with usage notes
+- [ ] `GET /api/projects/cards` — aggregation SQL (signup count, name preview, `isSignedUp`)
+- [ ] Verify pagination (`limit`, `offset`) and ordering (`created_at desc`)
+- [ ] `GET /api/projects/:id` — approved project details + full participant list
+- [ ] Add handler/repository tests and usage notes in repo
 
-## 17. Frontend Integration (Read-Only)
+## 18. Frontend Integration (Read-Only)
 
-- [ ] Add Supabase JS client and env variables
-- [ ] Replace mocked list with Edge Function `get_project_cards`
+- [ ] Add thin API client (`fetch` + `VITE_API_URL`); send `X-Client-Id` on requests
+- [ ] Replace mocked list with `GET /api/projects/cards`
 - [ ] Keep infinite scroll with server pagination
-- [ ] Details view: fetch full participant list for a project
+- [ ] Details view: `GET /api/projects/:id`
 - [ ] Implement loading and error states
 
-## 18. Participant Bootstrap (Lazy)
+## 19. Participant Bootstrap and Signup Mutations
 
-- [ ] On first join/propose, upsert participant by `client_id`
-- [ ] Store returned `participant_id` in memory
+- [ ] `POST /api/participants/bootstrap` — upsert by `client_id` + `display_name`
+- [ ] `POST /api/signups/join` — insert signup for current participant
+- [ ] `DELETE /api/signups` — give up current signup
+- [ ] `POST /api/signups/switch` — transactional switch (delete + insert)
+- [ ] On first join/propose, call bootstrap from client; store `participant_id` in memory if returned
+- [ ] Wire UI CTAs to API; optimistic update then refetch
 
-## 19. Join / Switch / Give Up (Backend)
+## 20. Propose Project (API + UI)
 
-- [ ] Implement join: insert into `signups` for current participant
-- [ ] Implement give up: delete from `signups` by participant
-- [ ] Create RPC `switch_signup(new_project_id, participant_id)` (transactional)
-- [ ] Wire UI CTAs to mutations; optimistic update then refetch
-
-## 20. Propose Project (Backend)
-
-- [ ] Insert `projects` with `status='pending'`
-- [ ] List shows only `approved`
-- [ ] Document how to approve in Supabase dashboard
+- [ ] `POST /api/projects` — insert with `status='pending'`
+- [ ] List/cards endpoints return only `approved` projects
+- [ ] Optional: `PATCH /api/admin/projects/:id/status` with `ADMIN_SECRET` for moderation
+- [ ] Document how to approve (SQL, DB console, or admin route)
 
 ## 21. Integration Tests
 
-- [ ] Mock Supabase in tests for list/details flows
-- [ ] Tests: join -> switch -> give up lifecycle
-- [ ] Tests: propose -> not visible until approved
+- [ ] Mock API (or test DB + Hono app) for list/details flows
+- [ ] Server tests: join → switch → give up lifecycle
+- [ ] Tests: propose → not visible in cards until approved
 
 ## 22. CI/CD Enhancements
 
 - [ ] Enforce tests and build in CI (fail PRs on errors)
+- [ ] CI: lint/typecheck/build frontend and server
 - [ ] Cache `node_modules` in CI
-- [ ] Ensure Netlify env vars for preview and production
+- [ ] Ensure Netlify `VITE_API_URL` and API host env vars for preview and production
 - [ ] README: add CI and Netlify status badges
 
 ## 23. Security Hardening
 
-- [ ] Netlify `_headers`: CSP (default-src 'self'; connect-src add Supabase), frame-ancestors 'none'
+- [ ] Netlify `_headers`: CSP (`default-src 'self'`; `connect-src` includes API origin), `frame-ancestors 'none'`
 - [ ] Add Referrer-Policy, X-Content-Type-Options, Permissions-Policy
-- [ ] Validate inputs on propose form (length, disallow script tags)
+- [ ] Validate inputs on propose form and Hono handlers (length, disallow script tags)
 - [ ] Sanitize/escape any user-provided text rendering (React default safe)
 
 ## 24. UX Polish and Accessibility
@@ -182,17 +192,17 @@ For every item:
 ## 25. E2E Smoke Tests and Deploy Gates
 
 - [ ] Playwright: first load, list renders, details open
-- [ ] Playwright: join -> switch -> give up (against test Supabase)
+- [ ] Playwright: join -> switch -> give up (against local or CI test API + Postgres)
 - [ ] Add E2E job to CI (nightly or on demand)
 - [ ] Netlify: run smoke tests on preview URL (optional)
 
 ## 26. Release Readiness
 
-- [ ] Final README: setup, environment, deploy, moderation
-- [ ] Confirm production Netlify deploy from `main`
+- [ ] Final README: setup, environment, deploy (frontend + Hono API + Postgres), moderation
+- [ ] Confirm production Netlify deploy from `main` and production API deploy
 
 ## 27. Post-MVP Backlog
 
 - [ ] Search/filter (title, newest)
-- [ ] Real-time updates for counts
-- [ ] Edge Functions or auth to improve RLS security
+- [ ] Real-time updates for counts (WebSockets or SSE from Hono)
+- [ ] Authentication to replace `client_id`-only identity
