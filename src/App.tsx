@@ -35,79 +35,34 @@ export default function App() {
 function HackathonApp() {
   const navigate = useNavigate();
   const [identity, setIdentity] = useState<Identity | null>(() => loadIdentity());
-  const [projectCards, setProjectCards] = useState<ProjectCard[]>([]);
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
-  const [isProjectsLoading, setIsProjectsLoading] = useState(false);
+  const [projectCards, setProjectCards] = useState<ProjectCard[]>(() =>
+    loadIdentity() ? loadProjectCards(loadIdentity() as Identity) : [],
+  );
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(() =>
+    loadIdentity() ? loadCurrentProjectId(loadIdentity() as Identity) : null,
+  );
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [proposalMessage, setProposalMessage] = useState<string | null>(null);
-  const refreshTimeoutRef = useRef<number | null>(null);
 
   const visibleProjects = useMemo(
     () => projectCards.slice(0, visibleCount),
     [projectCards, visibleCount],
   );
 
-  function refresh(nextIdentity = identity, withLoadingPlaceholder = false) {
+  function refresh(nextIdentity = identity) {
     if (!nextIdentity) {
       return;
     }
 
-    if (refreshTimeoutRef.current) {
-      window.clearTimeout(refreshTimeoutRef.current);
-      refreshTimeoutRef.current = null;
-    }
-
-    const applyRefresh = () => {
-      setProjectCards(loadProjectCards(nextIdentity));
-      setCurrentProjectId(loadCurrentProjectId(nextIdentity));
-      setIsProjectsLoading(false);
-    };
-
-    if (!withLoadingPlaceholder) {
-      applyRefresh();
-      return;
-    }
-
-    setIsProjectsLoading(true);
-    refreshTimeoutRef.current = window.setTimeout(() => {
-      applyRefresh();
-      refreshTimeoutRef.current = null;
-    }, 180);
-  }
-
-  useEffect(() => {
-    if (!identity) {
-      setProjectCards([]);
-      setCurrentProjectId(null);
-      setIsProjectsLoading(false);
-      return;
-    }
-
-    refresh(identity, true);
-    return () => {
-      if (refreshTimeoutRef.current) {
-        window.clearTimeout(refreshTimeoutRef.current);
-        refreshTimeoutRef.current = null;
-      }
-    };
-  }, [identity?.clientId]);
-
-  useEffect(
-    () => () => {
-      if (refreshTimeoutRef.current) {
-        window.clearTimeout(refreshTimeoutRef.current);
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
+    setProjectCards(loadProjectCards(nextIdentity));
+    setCurrentProjectId(loadCurrentProjectId(nextIdentity));
     setVisibleCount(PAGE_SIZE);
-  }, [projectCards.length]);
+  }
 
   function handleStart(displayName: string) {
     const nextIdentity = saveIdentity(displayName);
     setIdentity(nextIdentity);
+    refresh(nextIdentity);
     void navigate("/");
   }
 
@@ -118,7 +73,7 @@ function HackathonApp() {
 
     const nextIdentity = updateDisplayName(identity, displayName);
     setIdentity(nextIdentity);
-    refresh(nextIdentity, true);
+    refresh(nextIdentity);
   }
 
   function handleJoin(projectId: string) {
@@ -127,7 +82,7 @@ function HackathonApp() {
     }
 
     joinProject(identity, projectId);
-    refresh(identity, true);
+    refresh(identity);
     void navigate(`/project/${projectId}`);
   }
 
@@ -137,7 +92,7 @@ function HackathonApp() {
     }
 
     giveUpProject(identity);
-    refresh(identity, true);
+    refresh(identity);
   }
 
   function handleProposal(title: string, shortDescription: string) {
@@ -163,7 +118,7 @@ function HackathonApp() {
               <ProjectBoard
                 projects={visibleProjects}
                 totalCount={projectCards.length}
-                isProjectsLoading={isProjectsLoading}
+                isProjectsLoading={false}
                 currentProjectId={currentProjectId}
                 selectedProject={null}
                 isDetailsLoading={false}
@@ -189,7 +144,7 @@ function HackathonApp() {
                 identity={identity}
                 projects={visibleProjects}
                 totalCount={projectCards.length}
-                isProjectsLoading={isProjectsLoading}
+                isProjectsLoading={false}
                 currentProjectId={currentProjectId}
                 proposalMessage={proposalMessage}
                 onSelect={(projectId) => {
@@ -210,7 +165,7 @@ function HackathonApp() {
               <ProjectBoard
                 projects={visibleProjects}
                 totalCount={projectCards.length}
-                isProjectsLoading={isProjectsLoading}
+                isProjectsLoading={false}
                 currentProjectId={currentProjectId}
                 selectedProject={null}
                 isDetailsLoading={false}
@@ -263,18 +218,6 @@ function ProjectRoute({
 }) {
   const { projectId } = useParams();
   const selectedProject = projectId ? loadProjectDetails(projectId, identity) : null;
-  const [isDetailsLoading, setIsDetailsLoading] = useState(Boolean(projectId));
-
-  useEffect(() => {
-    if (!projectId) {
-      setIsDetailsLoading(false);
-      return;
-    }
-
-    setIsDetailsLoading(true);
-    const timer = window.setTimeout(() => setIsDetailsLoading(false), 180);
-    return () => window.clearTimeout(timer);
-  }, [identity.clientId, projectId]);
 
   return (
     <ProjectBoard
@@ -283,7 +226,7 @@ function ProjectRoute({
       isProjectsLoading={isProjectsLoading}
       currentProjectId={currentProjectId}
       selectedProject={selectedProject}
-      isDetailsLoading={isDetailsLoading}
+      isDetailsLoading={false}
       hasRequestedProject={Boolean(projectId)}
       proposalMessage={proposalMessage}
       showProposal={false}
