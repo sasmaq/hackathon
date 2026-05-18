@@ -109,6 +109,8 @@ Server env vars:
 - `CORS_ORIGIN` (required): Comma-separated allowlist. Include local frontend (`http://localhost:5173`) and production Netlify origin(s).
 - `PORT` (optional): API server port (default `8787`).
 
+Identity limitation (MVP): protected mutation routes resolve the participant from `X-Client-Id` and scope changes to that participant. This is not real authentication; if a client ID is exposed, another client could impersonate it. Future fix: replace header-only identity with session tokens or full auth.
+
 Run the backend in dev mode:
 
 ```bash

@@ -123,11 +123,11 @@ For every item:
 
 ## 16. API Validation and Access Rules
 
-- [ ] Resolve participant from `X-Client-Id` on protected routes
-- [ ] Public reads return only `approved` projects
-- [ ] Reject join/switch on non-approved projects; validate propose payload (length, no script tags)
-- [ ] Scope signup mutations to the resolved participant (note `client_id` impersonation risk for MVP)
-- [ ] Document limitations and future fix (session tokens or real auth)
+- [x] Resolve participant from `X-Client-Id` on protected routes
+- [x] Public reads return only `approved` projects
+- [x] Reject join/switch on non-approved projects; validate propose payload (length, no script tags)
+- [x] Scope signup mutations to the resolved participant (note `client_id` impersonation risk for MVP)
+- [x] Document limitations and future fix (session tokens or real auth)
 
 ## 17. Hono Route: Project Cards and Details
 
