@@ -117,9 +117,9 @@ For every item:
 
 - [ ] Provision preview and prod Postgres databases (or schemas)
 - [ ] Deploy Hono API to preview and production hosts; record API base URLs
-- [ ] Configure Netlify contexts: Deploy Previews → preview API, Production → prod API
-- [ ] Set `VITE_API_URL` per Netlify context; set `DATABASE_URL`, `CORS_ORIGIN`, optional `ADMIN_SECRET` on API host
-- [ ] Document environment strategy and migration flow
+- [x] Configure Netlify contexts: Deploy Previews -> preview API, Production -> prod API
+- [x] Set `VITE_API_URL` per Netlify context; set `DATABASE_URL`, `CORS_ORIGIN`, optional `ADMIN_SECRET` on API host
+- [x] Document environment strategy and migration flow
 
 ## 16. API Validation and Access Rules
 

@@ -47,6 +47,9 @@ Deploy the `dist/` folder to any static host. For Netlify, use:
 
 - Build command: `npm run build`
 - Publish directory: `dist`
+- Context env config: see `netlify.toml` (`VITE_API_URL` for deploy previews and production)
+
+Environment and migration strategy for preview/production is documented in `doc/environments.md`.
 
 The current MVP stores identity, signups, and pending proposals in `localStorage`; no backend environment variables are required yet.
 

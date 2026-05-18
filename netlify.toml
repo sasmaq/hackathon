@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[context.deploy-preview.environment]
+  VITE_API_URL = "https://preview-api.example.com"
+
+[context.production.environment]
+  VITE_API_URL = "https://api.example.com"
