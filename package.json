@@ -9,7 +9,11 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:server": "tsx watch server/src/index.ts",
+    "dev:fullstack": "concurrently -k -n client,server -c green,cyan \"npm run dev\" \"npm run dev:server\"",
     "build": "tsc --noEmit && vite build",
+    "build:server": "tsc -p server/tsconfig.json",
+    "start:server": "node server/dist/index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
@@ -24,7 +28,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hono/node-server": "^2.0.3",
     "@vitejs/plugin-react": "latest",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.19",
+    "postgres": "^3.4.9",
     "react": "latest",
     "react-dom": "latest",
     "react-router-dom": "^7.15.1",
@@ -37,8 +45,10 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/jest": "^30.0.0",
+    "@types/node": "^25.9.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.2.1",
     "eslint": "^10.4.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -47,6 +57,7 @@
     "jest-environment-jsdom": "^30.4.1",
     "prettier": "^3.8.3",
     "ts-jest": "^29.4.9",
+    "tsx": "^4.22.2",
     "typescript-eslint": "^8.59.3"
   }
 }

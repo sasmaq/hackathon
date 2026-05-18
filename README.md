@@ -92,6 +92,72 @@ Stop the database:
 docker compose down
 ```
 
+## Backend Server (Hono)
+
+Create the server env file:
+
+```bash
+cp server/.env.example server/.env
+```
+
+Server env vars:
+
+- `DATABASE_URL` (required): Postgres connection string used by the backend.
+- `CORS_ORIGIN` (required): Comma-separated allowlist. Include local frontend (`http://localhost:5173`) and production Netlify origin(s).
+- `PORT` (optional): API server port (default `8787`).
+
+Run the backend in dev mode:
+
+```bash
+npm run dev:server
+```
+
+Build backend output:
+
+```bash
+npm run build:server
+```
+
+Serve the built frontend from Hono (single server for app + API):
+
+```bash
+npm run build
+npm run build:server
+npm run start:server
+```
+
+Then open `http://localhost:8787`.
+
+## Full Stack Local Development
+
+Ensure local env files exist:
+
+```bash
+cp .env.example .env
+cp server/.env.example server/.env
+```
+
+Create frontend local API config in `.env.local`:
+
+```bash
+VITE_API_URL=http://localhost:8787
+```
+
+Then run full stack locally:
+
+```bash
+docker compose up -d
+set -a; source .env; set +a
+docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < server/db/migrations/001_initial_schema.sql
+docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < server/db/seeds/001_projects.sql
+npm run dev:fullstack
+```
+
+This starts:
+
+- frontend (Vite) on `http://localhost:5173`
+- backend (Hono) on `http://localhost:8787`
+
 ### Moderation Flow (SQL)
 
 The app should only list projects with `status = 'approved'`. Proposals are created as `pending`, then manually reviewed:

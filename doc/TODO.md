@@ -98,20 +98,20 @@ For every item:
 
 ## 13. Hono Server Scaffold
 
-- [ ] Create `server/` with Hono and `@hono/node-server`
-- [ ] Add `GET /api/health` and shared error JSON shape `{ "error": "message" }`
-- [ ] Wire Postgres client (e.g. `postgres` or Drizzle) via `DATABASE_URL`
-- [ ] Add CORS for `http://localhost:5173` and production Netlify origin(s)
-- [ ] Add npm scripts: `dev:server`, `build:server` (as needed)
-- [ ] Document server env vars in README
+- [x] Create `server/` with Hono and `@hono/node-server`
+- [x] Add `GET /api/health` and shared error JSON shape `{ "error": "message" }`
+- [x] Wire Postgres client (e.g. `postgres` or Drizzle) via `DATABASE_URL`
+- [x] Add CORS for `http://localhost:5173` and production Netlify origin(s)
+- [x] Add npm scripts: `dev:server`, `build:server` (as needed)
+- [x] Document server env vars in README
 
 ## 14. Local Dev: Full Stack
 
-- [ ] Start Postgres locally (`docker compose up`)
-- [ ] Run migrations against local DB
-- [ ] Run Vite and Hono concurrently for local development
-- [ ] Add `.env.local` (`VITE_API_URL`) and `server/.env` (`DATABASE_URL`, `CORS_ORIGIN`)
-- [ ] Docs: how to run full stack locally
+- [x] Start Postgres locally (`docker compose up`)
+- [x] Run migrations against local DB
+- [x] Run Vite and Hono concurrently for local development
+- [x] Add `.env.local` (`VITE_API_URL`) and `server/.env` (`DATABASE_URL`, `CORS_ORIGIN`)
+- [x] Docs: how to run full stack locally
 
 ## 15. Environments (Preview + Prod)
 
