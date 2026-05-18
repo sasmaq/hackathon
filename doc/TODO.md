@@ -90,11 +90,11 @@ For every item:
 
 ## 12. Database Setup (Postgres)
 
-- [ ] Add Docker Compose (or documented hosted Postgres) for local development
-- [ ] Create tables: `participants`, `projects`, `signups` (see PRD data model)
-- [ ] Add migration SQL under `server/db/migrations/` (or equivalent)
-- [ ] Seed a few `projects` (approved and pending)
-- [ ] Document moderation flow (SQL, DB console, or admin API route)
+- [x] Add Docker Compose for local development with Postgres
+- [x] Create tables: `participants`, `projects`, `signups` (see PRD data model)
+- [x] Add migration SQL under `server/db/migrations/` (or equivalent)
+- [x] Seed a few `projects` (approved and pending)
+- [x] Document moderation flow (SQL, DB console, or admin API route)
 
 ## 13. Hono Server Scaffold
 

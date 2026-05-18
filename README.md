@@ -49,3 +49,74 @@ Deploy the `dist/` folder to any static host. For Netlify, use:
 - Publish directory: `dist`
 
 The current MVP stores identity, signups, and pending proposals in `localStorage`; no backend environment variables are required yet.
+
+## Local Postgres Setup
+
+Copy the env template once (or edit `.env` directly):
+
+```bash
+cp .env.example .env
+```
+
+Start Postgres with Docker Compose:
+
+```bash
+docker compose up -d
+```
+
+Connection details for local development:
+
+- Host: `localhost`
+- Port: `POSTGRES_PORT` from `.env` (default `5432`)
+- Database: `POSTGRES_DB` from `.env` (default `hackathon`)
+- User: `POSTGRES_USER` from `.env` (default `hackathon`)
+- Password: `POSTGRES_PASSWORD` from `.env` (default `hackathon`)
+
+Apply the schema migration:
+
+```bash
+set -a; source .env; set +a
+docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < server/db/migrations/001_initial_schema.sql
+```
+
+Seed starter projects:
+
+```bash
+set -a; source .env; set +a
+docker compose exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < server/db/seeds/001_projects.sql
+```
+
+Stop the database:
+
+```bash
+docker compose down
+```
+
+### Moderation Flow (SQL)
+
+The app should only list projects with `status = 'approved'`. Proposals are created as `pending`, then manually reviewed:
+
+List pending projects:
+
+```sql
+select id, title, status, created_at
+from projects
+where status = 'pending'
+order by created_at desc;
+```
+
+Approve a project:
+
+```sql
+update projects
+set status = 'approved'
+where id = '<project-uuid>';
+```
+
+Reject a project:
+
+```sql
+update projects
+set status = 'rejected'
+where id = '<project-uuid>';
+```
