@@ -283,12 +283,18 @@ app.post("/api/signups/switch", requireClientId, resolveParticipant, async (c) =
     throw new HTTPException(400, { message: "Cannot switch without an existing signup" });
   }
 
-  const rows = await sql<{ participant_id: string; project_id: string }[]>`
-    update signups
-    set project_id = ${projectId}::uuid, created_at = now()
-    where participant_id = ${participantId}::uuid
-    returning participant_id, project_id
-  `;
+  const rows = await sql.begin(async (tx) => {
+    await tx`
+      delete from signups
+      where participant_id = ${participantId}::uuid
+    `;
+
+    return tx<{ participant_id: string; project_id: string }[]>`
+      insert into signups (participant_id, project_id)
+      values (${participantId}::uuid, ${projectId}::uuid)
+      returning participant_id, project_id
+    `;
+  });
 
   return c.json({
     participantId: rows[0].participant_id,
@@ -388,12 +394,17 @@ app.onError((error, c) => {
   return c.json({ error: "Internal Server Error" }, 500);
 });
 
-serve(
-  {
-    fetch: app.fetch,
-    port: env.port,
-  },
-  (info) => {
-    console.log(`Server listening on http://localhost:${info.port}`);
-  },
-);
+export const startServer = () =>
+  serve(
+    {
+      fetch: app.fetch,
+      port: env.port,
+    },
+    (info) => {
+      console.log(`Server listening on http://localhost:${info.port}`);
+    },
+  );
+
+if (process.env.NODE_ENV !== "test") {
+  startServer();
+}

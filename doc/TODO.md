@@ -131,27 +131,27 @@ For every item:
 
 ## 17. Hono Route: Project Cards and Details
 
-- [ ] `GET /api/projects/cards` — aggregation SQL (signup count, name preview, `isSignedUp`)
-- [ ] Verify pagination (`limit`, `offset`) and ordering (`created_at desc`)
-- [ ] `GET /api/projects/:id` — approved project details + full participant list
-- [ ] Add handler/repository tests and usage notes in repo
+- [x] `GET /api/projects/cards` — aggregation SQL (signup count, name preview, `isSignedUp`)
+- [x] Verify pagination (`limit`, `offset`) and ordering (`created_at desc`)
+- [x] `GET /api/projects/:id` — approved project details + full participant list
+- [x] Add handler/repository tests and usage notes in repo
 
 ## 18. Frontend Integration (Read-Only)
 
-- [ ] Add thin API client (`fetch` + `VITE_API_URL`); send `X-Client-Id` on requests
-- [ ] Replace mocked list with `GET /api/projects/cards`
-- [ ] Keep infinite scroll with server pagination
-- [ ] Details view: `GET /api/projects/:id`
-- [ ] Implement loading and error states
+- [x] Add thin API client (`fetch` + `VITE_API_URL`); send `X-Client-Id` on requests
+- [x] Replace mocked list with `GET /api/projects/cards`
+- [x] Keep infinite scroll with server pagination
+- [x] Details view: `GET /api/projects/:id`
+- [x] Implement loading and error states
 
 ## 19. Participant Bootstrap and Signup Mutations
 
-- [ ] `POST /api/participants/bootstrap` — upsert by `client_id` + `display_name`
-- [ ] `POST /api/signups/join` — insert signup for current participant
-- [ ] `DELETE /api/signups` — give up current signup
-- [ ] `POST /api/signups/switch` — transactional switch (delete + insert)
-- [ ] On first join/propose, call bootstrap from client; store `participant_id` in memory if returned
-- [ ] Wire UI CTAs to API; optimistic update then refetch
+- [x] `POST /api/participants/bootstrap` — upsert by `client_id` + `display_name`
+- [x] `POST /api/signups/join` — insert signup for current participant
+- [x] `DELETE /api/signups` — give up current signup
+- [x] `POST /api/signups/switch` — transactional switch (delete + insert)
+- [x] On first join/propose, call bootstrap from client; store `participant_id` in memory if returned
+- [x] Wire UI CTAs to API; optimistic update then refetch
 
 ## 20. Propose Project (API + UI)
 
@@ -172,7 +172,6 @@ For every item:
 - [ ] CI: lint/typecheck/build frontend and server
 - [ ] Cache `node_modules` in CI
 - [ ] Ensure Netlify `VITE_API_URL` and API host env vars for preview and production
-- [ ] README: add CI and Netlify status badges
 
 ## 23. Security Hardening
 

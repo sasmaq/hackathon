@@ -3,20 +3,22 @@ import {
   FormEvent,
   MouseEvent,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 import { BrowserRouter, Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
 import {
-  giveUpProject,
-  joinProject,
-  loadCurrentProjectId,
+  bootstrapParticipant,
+  getProjectCards,
+  getProjectDetails,
+  giveUpProjectSignup,
+  joinProjectSignup,
+  proposeProjectIdea,
+  switchProjectSignup,
+} from "./api";
+import {
   loadIdentity,
-  loadProjectCards,
-  loadProjectDetails,
-  proposeProject,
   saveIdentity,
   updateDisplayName,
 } from "./data";
@@ -35,34 +37,47 @@ export default function App() {
 function HackathonApp() {
   const navigate = useNavigate();
   const [identity, setIdentity] = useState<Identity | null>(() => loadIdentity());
-  const [projectCards, setProjectCards] = useState<ProjectCard[]>(() =>
-    loadIdentity() ? loadProjectCards(loadIdentity() as Identity) : [],
-  );
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(() =>
-    loadIdentity() ? loadCurrentProjectId(loadIdentity() as Identity) : null,
-  );
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [projectCards, setProjectCards] = useState<ProjectCard[]>([]);
+  const [hasMoreProjects, setHasMoreProjects] = useState(true);
+  const [isProjectsLoading, setIsProjectsLoading] = useState(false);
+  const [projectsError, setProjectsError] = useState<string | null>(null);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [participantId, setParticipantId] = useState<string | null>(null);
+  const [detailsRefreshKey, setDetailsRefreshKey] = useState(0);
   const [proposalMessage, setProposalMessage] = useState<string | null>(null);
 
-  const visibleProjects = useMemo(
-    () => projectCards.slice(0, visibleCount),
-    [projectCards, visibleCount],
-  );
-
-  function refresh(nextIdentity = identity) {
-    if (!nextIdentity) {
+  const loadProjectsPage = async (nextIdentity: Identity, reset = false) => {
+    if (isProjectsLoading) {
       return;
     }
 
-    setProjectCards(loadProjectCards(nextIdentity));
-    setCurrentProjectId(loadCurrentProjectId(nextIdentity));
-    setVisibleCount(PAGE_SIZE);
-  }
+    setProjectsError(null);
+    setIsProjectsLoading(true);
+
+    try {
+      const offset = reset ? 0 : projectCards.length;
+      const response = await getProjectCards(nextIdentity.clientId, PAGE_SIZE, offset);
+      setProjectCards((previous) => (reset ? response.items : [...previous, ...response.items]));
+      setHasMoreProjects(response.hasMore);
+    } catch (error) {
+      console.error(error);
+      setProjectsError("Unable to load projects right now.");
+    } finally {
+      setIsProjectsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!identity) {
+      return;
+    }
+
+    void loadProjectsPage(identity, true);
+  }, [identity]);
 
   function handleStart(displayName: string) {
     const nextIdentity = saveIdentity(displayName);
     setIdentity(nextIdentity);
-    refresh(nextIdentity);
     void navigate("/");
   }
 
@@ -73,33 +88,126 @@ function HackathonApp() {
 
     const nextIdentity = updateDisplayName(identity, displayName);
     setIdentity(nextIdentity);
-    refresh(nextIdentity);
   }
 
-  function handleJoin(projectId: string) {
+  const applyOptimisticSignup = (nextProjectId: string | null, previousProjectId: string | null) => {
+    setProjectCards((previousCards) =>
+      previousCards.map((project) => {
+        const wasCurrent = project.id === previousProjectId;
+        const isCurrent = project.id === nextProjectId;
+        let nextSignupCount = project.signupCount;
+
+        if (wasCurrent && !isCurrent && nextSignupCount > 0) {
+          nextSignupCount -= 1;
+        }
+
+        if (!wasCurrent && isCurrent) {
+          nextSignupCount += 1;
+        }
+
+        return {
+          ...project,
+          signupCount: nextSignupCount,
+          isSignedUp: isCurrent,
+          remainingParticipantCount: Math.max(
+            nextSignupCount - project.participantNamesPreview.length,
+            0,
+          ),
+        };
+      }),
+    );
+  };
+
+  const ensureBootstrapped = async (nextIdentity: Identity): Promise<string> => {
+    if (participantId) {
+      return participantId;
+    }
+
+    const response = await bootstrapParticipant(nextIdentity.clientId, nextIdentity.displayName);
+    setParticipantId(response.participantId);
+    return response.participantId;
+  };
+
+  async function refreshProjects(nextIdentity: Identity) {
+    await loadProjectsPage(nextIdentity, true);
+    setDetailsRefreshKey((value) => value + 1);
+  }
+
+  async function handleJoin(projectId: string) {
     if (!identity) {
       return;
     }
 
-    joinProject(identity, projectId);
-    refresh(identity);
+    const previousProjectId = currentProjectId;
+    const isSwitch = Boolean(previousProjectId && previousProjectId !== projectId);
+    setProjectsError(null);
+    setCurrentProjectId(projectId);
+    applyOptimisticSignup(projectId, previousProjectId);
+
+    try {
+      await ensureBootstrapped(identity);
+
+      if (isSwitch) {
+        await switchProjectSignup(identity.clientId, projectId);
+      } else {
+        await joinProjectSignup(identity.clientId, projectId);
+      }
+
+      await refreshProjects(identity);
+    } catch (error) {
+      console.error(error);
+      setProjectsError("Unable to update your signup right now.");
+      setCurrentProjectId(previousProjectId);
+      applyOptimisticSignup(previousProjectId, projectId);
+    }
+
     void navigate(`/project/${projectId}`);
   }
 
-  function handleGiveUp() {
+  async function handleGiveUp() {
     if (!identity) {
       return;
     }
 
-    giveUpProject(identity);
-    refresh(identity);
+    if (!currentProjectId) {
+      return;
+    }
+
+    const previousProjectId = currentProjectId;
+    setProjectsError(null);
+    setCurrentProjectId(null);
+    applyOptimisticSignup(null, previousProjectId);
+
+    try {
+      await ensureBootstrapped(identity);
+      await giveUpProjectSignup(identity.clientId);
+      await refreshProjects(identity);
+    } catch (error) {
+      console.error(error);
+      setProjectsError("Unable to give up this project right now.");
+      setCurrentProjectId(previousProjectId);
+      applyOptimisticSignup(previousProjectId, null);
+    }
   }
 
-  function handleProposal(title: string, shortDescription: string) {
-    proposeProject(title, shortDescription);
-    setProposalMessage(
-      "Thanks. Your project idea is pending manual review before it appears here.",
-    );
+  async function handleProposal(title: string, shortDescription: string) {
+    if (!identity) {
+      return;
+    }
+
+    setProposalMessage(null);
+
+    try {
+      await ensureBootstrapped(identity);
+      await proposeProjectIdea(identity.clientId, title, shortDescription);
+      setProposalMessage(
+        "Thanks. Your project idea is pending manual review before it appears here.",
+      );
+      await refreshProjects(identity);
+    } catch (error) {
+      console.error(error);
+      setProposalMessage("Unable to submit your proposal right now. Please try again.");
+    }
   }
 
   if (!identity) {
@@ -116,12 +224,15 @@ function HackathonApp() {
             path="/"
             element={
               <ProjectBoard
-                projects={visibleProjects}
+                projects={projectCards}
                 totalCount={projectCards.length}
-                isProjectsLoading={false}
+                hasMoreProjects={hasMoreProjects}
+                isProjectsLoading={isProjectsLoading}
+                projectsError={projectsError}
                 currentProjectId={currentProjectId}
                 selectedProject={null}
                 isDetailsLoading={false}
+                detailsError={null}
                 hasRequestedProject={false}
                 proposalMessage={proposalMessage}
                 showProposal={false}
@@ -130,9 +241,7 @@ function HackathonApp() {
                 }}
                 onJoin={handleJoin}
                 onGiveUp={handleGiveUp}
-                onLoadMore={() =>
-                  setVisibleCount((count) => Math.min(count + PAGE_SIZE, projectCards.length))
-                }
+                onLoadMore={() => void loadProjectsPage(identity)}
                 onProposal={handleProposal}
               />
             }
@@ -142,19 +251,20 @@ function HackathonApp() {
             element={
               <ProjectRoute
                 identity={identity}
-                projects={visibleProjects}
+                projects={projectCards}
                 totalCount={projectCards.length}
-                isProjectsLoading={false}
+                hasMoreProjects={hasMoreProjects}
+                isProjectsLoading={isProjectsLoading}
+                projectsError={projectsError}
                 currentProjectId={currentProjectId}
                 proposalMessage={proposalMessage}
+                detailsRefreshKey={detailsRefreshKey}
                 onSelect={(projectId) => {
                   void navigate(`/project/${projectId}`);
                 }}
                 onJoin={handleJoin}
                 onGiveUp={handleGiveUp}
-                onLoadMore={() =>
-                  setVisibleCount((count) => Math.min(count + PAGE_SIZE, projectCards.length))
-                }
+                onLoadMore={() => void loadProjectsPage(identity)}
                 onProposal={handleProposal}
               />
             }
@@ -163,12 +273,15 @@ function HackathonApp() {
             path="/propose"
             element={
               <ProjectBoard
-                projects={visibleProjects}
+                projects={projectCards}
                 totalCount={projectCards.length}
-                isProjectsLoading={false}
+                hasMoreProjects={hasMoreProjects}
+                isProjectsLoading={isProjectsLoading}
+                projectsError={projectsError}
                 currentProjectId={currentProjectId}
                 selectedProject={null}
                 isDetailsLoading={false}
+                detailsError={null}
                 hasRequestedProject={false}
                 proposalMessage={proposalMessage}
                 showProposal
@@ -177,9 +290,7 @@ function HackathonApp() {
                 }}
                 onJoin={handleJoin}
                 onGiveUp={handleGiveUp}
-                onLoadMore={() =>
-                  setVisibleCount((count) => Math.min(count + PAGE_SIZE, projectCards.length))
-                }
+                onLoadMore={() => void loadProjectsPage(identity)}
                 onProposal={handleProposal}
               />
             }
@@ -195,9 +306,12 @@ function ProjectRoute({
   identity,
   projects,
   totalCount,
+  hasMoreProjects,
   isProjectsLoading,
+  projectsError,
   currentProjectId,
   proposalMessage,
+  detailsRefreshKey,
   onSelect,
   onJoin,
   onGiveUp,
@@ -207,9 +321,12 @@ function ProjectRoute({
   identity: Identity;
   projects: ProjectCard[];
   totalCount: number;
+  hasMoreProjects: boolean;
   isProjectsLoading: boolean;
+  projectsError: string | null;
   currentProjectId: string | null;
   proposalMessage: string | null;
+  detailsRefreshKey: number;
   onSelect: (projectId: string) => void;
   onJoin: (projectId: string) => void;
   onGiveUp: () => void;
@@ -217,16 +334,59 @@ function ProjectRoute({
   onProposal: (title: string, shortDescription: string) => void;
 }) {
   const { projectId } = useParams();
-  const selectedProject = projectId ? loadProjectDetails(projectId, identity) : null;
+  const [selectedProject, setSelectedProject] = useState<ProjectDetails | null>(null);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!projectId) {
+      setSelectedProject(null);
+      setDetailsError(null);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const run = async () => {
+      setIsDetailsLoading(true);
+      setDetailsError(null);
+
+      try {
+        const details = await getProjectDetails(identity.clientId, projectId);
+        if (!isCancelled) {
+          setSelectedProject(details);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error(error);
+          setSelectedProject(null);
+          setDetailsError("Unable to load project details right now.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsDetailsLoading(false);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [detailsRefreshKey, identity.clientId, projectId]);
 
   return (
     <ProjectBoard
       projects={projects}
       totalCount={totalCount}
+      hasMoreProjects={hasMoreProjects}
       isProjectsLoading={isProjectsLoading}
+      projectsError={projectsError}
       currentProjectId={currentProjectId}
       selectedProject={selectedProject}
-      isDetailsLoading={false}
+      isDetailsLoading={isDetailsLoading}
+      detailsError={detailsError}
       hasRequestedProject={Boolean(projectId)}
       proposalMessage={proposalMessage}
       showProposal={false}
@@ -242,10 +402,13 @@ function ProjectRoute({
 function ProjectBoard({
   projects,
   totalCount,
+  hasMoreProjects,
   isProjectsLoading,
+  projectsError,
   currentProjectId,
   selectedProject,
   isDetailsLoading,
+  detailsError,
   hasRequestedProject,
   proposalMessage,
   showProposal,
@@ -257,10 +420,13 @@ function ProjectBoard({
 }: {
   projects: ProjectCard[];
   totalCount: number;
+  hasMoreProjects: boolean;
   isProjectsLoading: boolean;
+  projectsError: string | null;
   currentProjectId: string | null;
   selectedProject: ProjectDetails | null;
   isDetailsLoading: boolean;
+  detailsError: string | null;
   hasRequestedProject: boolean;
   proposalMessage: string | null;
   showProposal: boolean;
@@ -284,7 +450,9 @@ function ProjectBoard({
         <ProjectList
           projects={projects}
           totalCount={totalCount}
+          hasMore={hasMoreProjects}
           isLoading={isProjectsLoading}
+          error={projectsError}
           currentProjectId={currentProjectId}
           onSelect={onSelect}
           onJoin={onJoin}
@@ -300,6 +468,7 @@ function ProjectBoard({
           <>
             <ProjectDetailsPanel
               isLoading={isDetailsLoading}
+              error={detailsError}
               hasRequestedProject={hasRequestedProject}
               project={selectedProject}
               currentProjectId={currentProjectId}
@@ -434,7 +603,9 @@ function Hero({
 function ProjectList({
   projects,
   totalCount,
+  hasMore,
   isLoading,
+  error,
   currentProjectId,
   onSelect,
   onJoin,
@@ -443,7 +614,9 @@ function ProjectList({
 }: {
   projects: ProjectCard[];
   totalCount: number;
+  hasMore: boolean;
   isLoading: boolean;
+  error: string | null;
   currentProjectId: string | null;
   onSelect: (projectId: string) => void;
   onJoin: (projectId: string) => void;
@@ -451,7 +624,6 @@ function ProjectList({
   onLoadMore: () => void;
 }) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const hasMore = projects.length < totalCount;
 
   useEffect(() => {
     if (!hasMore || !sentinelRef.current) {
@@ -498,6 +670,13 @@ function ProjectList({
             New project proposals stay hidden until manual review. Check back after a project is
             approved.
           </p>
+        </section>
+      ) : null}
+      {error ? (
+        <section className="panel empty-panel" role="alert">
+          <p className="eyebrow">Project Board</p>
+          <h3>Unable to load projects</h3>
+          <p>{error}</p>
         </section>
       ) : null}
       <div className="cards-grid">
@@ -605,6 +784,7 @@ function ParticipantPreview({ project }: { project: ProjectCard }) {
 
 function ProjectDetailsPanel({
   isLoading,
+  error,
   hasRequestedProject,
   project,
   currentProjectId,
@@ -612,6 +792,7 @@ function ProjectDetailsPanel({
   onGiveUp,
 }: {
   isLoading: boolean;
+  error: string | null;
   hasRequestedProject: boolean;
   project: ProjectDetails | null;
   currentProjectId: string | null;
@@ -635,7 +816,7 @@ function ProjectDetailsPanel({
       <section className="panel empty-panel">
         <p className="eyebrow">Project Details</p>
         <h2>Project unavailable</h2>
-        <p>This project was not found or is no longer approved for public browsing.</p>
+        <p>{error ?? "This project was not found or is no longer approved for public browsing."}</p>
         <Link className="panel-link" to="/">
           Back to project board
         </Link>

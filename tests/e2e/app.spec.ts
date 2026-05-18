@@ -1,6 +1,58 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const IDENTITY_KEY = "hackathon.identity";
+const KNOWN_PROJECT_ID = "11111111-1111-4111-8111-111111111111";
+
+async function mockApi(page: Page) {
+  await page.route("**/api/projects/cards**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        items: [
+          {
+            projectId: KNOWN_PROJECT_ID,
+            title: "AI Pull Request Review Bot",
+            shortDescription:
+              "Build an assistant that summarizes code changes and flags risky diffs before review.",
+            signupCount: 2,
+            participantNamesPreview: ["Grace Hopper", "Ada Lovelace"],
+            isSignedUp: false,
+          },
+        ],
+        limit: 6,
+        offset: 0,
+        hasMore: false,
+      }),
+    });
+  });
+
+  await page.route("**/api/projects/*", async (route) => {
+    const url = route.request().url();
+    const projectId = url.split("/api/projects/")[1];
+
+    if (projectId === KNOWN_PROJECT_ID) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          projectId: KNOWN_PROJECT_ID,
+          title: "AI Pull Request Review Bot",
+          shortDescription:
+            "Build an assistant that summarizes code changes and flags risky diffs before review.",
+          participants: ["Grace Hopper", "Ada Lovelace"],
+        }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "Project not found" }),
+    });
+  });
+}
 
 async function bootstrapIdentity(page: Page, displayName: string) {
   await page.addInitScript(
@@ -8,7 +60,7 @@ async function bootstrapIdentity(page: Page, displayName: string) {
       localStorage.setItem(
         key,
         JSON.stringify({
-          clientId: "participant-e2e",
+          clientId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
           displayName: name,
         }),
       );
@@ -43,10 +95,11 @@ test("onboarding submits and opens project board", async ({ page }) => {
 
 test("project details route renders details panel", async ({ page }) => {
   await bootstrapIdentity(page, "Ada Lovelace");
-  await page.goto("/project/ai-review-bot");
+  await mockApi(page);
+  await page.goto(`/project/${KNOWN_PROJECT_ID}`);
 
   const detailsPanel = page.getByLabel("Project details and proposals");
-  await expect(page.getByText("Project Details")).toBeVisible();
+  await expect(detailsPanel.getByText("Project Details", { exact: true })).toBeVisible();
   await expect(
     detailsPanel.getByRole("heading", { name: /ai pull request review bot/i, level: 2 }),
   ).toBeVisible();
@@ -79,7 +132,8 @@ test("unknown route shows not found screen", async ({ page }) => {
 
 test("unknown project route shows unavailable state", async ({ page }) => {
   await bootstrapIdentity(page, "Barbara Liskov");
-  await page.goto("/project/not-an-approved-project");
+  await mockApi(page);
+  await page.goto("/project/99999999-9999-4999-8999-999999999999");
 
   await expect(page.getByRole("heading", { name: /project unavailable/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /back to project board/i })).toBeVisible();

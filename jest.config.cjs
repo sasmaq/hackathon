@@ -3,7 +3,7 @@ module.exports = {
   testEnvironment: "jsdom",
   setupFiles: ["<rootDir>/src/test/polyfills.cjs"],
   setupFilesAfterEnv: ["<rootDir>/src/setupTests.ts"],
-  testMatch: ["<rootDir>/src/**/*.test.ts?(x)"],
+  testMatch: ["<rootDir>/src/**/*.test.ts?(x)", "<rootDir>/server/src/**/*.test.ts"],
   transform: {
     "^.+\\.tsx?$": [
       "ts-jest",
@@ -20,6 +20,7 @@ module.exports = {
     ],
   },
   moduleNameMapper: {
+    "^(\\.{1,2}/.*)\\.js$": "$1",
     "\\.(css|less|scss|sass)$": "<rootDir>/src/test/styleMock.ts",
   },
 };

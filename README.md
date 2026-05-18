@@ -117,6 +117,16 @@ Run the backend in dev mode:
 npm run dev:server
 ```
 
+Core API usage:
+
+- `GET /api/projects/cards?limit=20&offset=0`
+  - Returns approved project cards only.
+  - Includes aggregated fields: `signupCount`, `participantNamesPreview` (up to 5), and `isSignedUp` (when `X-Client-Id` is provided).
+  - Pagination output: `{ items, limit, offset, hasMore }`.
+- `GET /api/projects/:id`
+  - Returns approved project details only.
+  - Includes full participant list for that project.
+
 Build backend output:
 
 ```bash
