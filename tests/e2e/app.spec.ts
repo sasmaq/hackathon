@@ -110,6 +110,7 @@ test("app renders at /", async ({ page }) => {
 });
 
 test("onboarding submits and opens project board", async ({ page }) => {
+  await mockApi(page);
   await page.goto("/");
 
   await page.getByLabel("Display name").fill("Grace Hopper");
@@ -155,6 +156,7 @@ test("proposal route accepts a new project idea", async ({ page }) => {
 
 test("unknown route shows not found screen", async ({ page }) => {
   await bootstrapIdentity(page, "Linus Torvalds");
+  await mockApi(page);
   await page.goto("/this-route-does-not-exist");
 
   await expect(page.getByRole("heading", { name: /that page does not exist/i })).toBeVisible();
