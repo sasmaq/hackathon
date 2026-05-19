@@ -25,12 +25,12 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      PORT: ${BACKEND_PORT:-8787}
+      PORT: ${PORT:-8787}
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      CORS_ORIGIN: ${BACKEND_CORS_ORIGIN:-http://localhost:5173}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
     command: sh -c "npm install && npm run dev:server"
     ports:
-      - "${BACKEND_PORT:-8787}:8787"
+      - "${PORT:-8787}:8787"
     volumes:
       - ./:/app
       - backend-node-modules:/app/node_modules

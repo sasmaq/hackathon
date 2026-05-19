@@ -28,3 +28,8 @@ pnpm-debug.log*
 # Playwright artifacts
 playwright-report/
 test-results/
+
+# Local SQLite mirror artifacts
+server/db/sqlite/*.sqlite
+server/db/sqlite/*.sqlite-shm
+server/db/sqlite/*.sqlite-wal

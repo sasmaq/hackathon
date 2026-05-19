@@ -4,7 +4,7 @@ import App from "./App";
 import "./App.css";
 
 const apiBaseUrl = import.meta.env.VITE_API_URL
-  ? String(import.meta.env.VITE_API_URL)
+  ? (import.meta.env.DEV ? undefined : String(import.meta.env.VITE_API_URL))
   : undefined;
 globalThis.__APP_API_BASE_URL = apiBaseUrl;
 

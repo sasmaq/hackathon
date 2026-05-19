@@ -9,6 +9,8 @@ import { Hono } from "hono";
 import type { MiddlewareHandler } from "hono";
 
 import { sql } from "./db/client.js";
+import { mirror, mirrorSafe } from "./db/sqlite/mirror.js";
+import { sqlitePrimary } from "./db/sqlite/primary.js";
 import { env } from "./env.js";
 
 type AppVariables = {
@@ -33,6 +35,14 @@ const MAX_SHORT_DESCRIPTION_LENGTH = 500;
 const PROJECT_STATUSES = ["pending", "approved", "rejected"] as const;
 
 type ProjectStatus = (typeof PROJECT_STATUSES)[number];
+const usingSqliteOnly = env.debugSqliteOnly;
+const getSql = () => {
+  if (!sql) {
+    throw new Error("Postgres client is unavailable in SQLite-only mode");
+  }
+
+  return sql;
+};
 
 export const app = new Hono<{ Variables: AppVariables }>();
 const distIndexPath = resolve(process.cwd(), "dist/index.html");
@@ -60,36 +70,41 @@ const requireClientId: AppMiddleware = async (c, next) => {
 
 const resolveParticipant: AppMiddleware = async (c, next) => {
   const clientId = c.get("clientId");
-  const participantRows = await sql<{ id: string }[]>`
-    select id
-    from participants
-    where client_id = ${clientId}::uuid
-    limit 1
-  `;
 
-  if (participantRows.length === 0) {
+  const participant = usingSqliteOnly
+    ? sqlitePrimary.findParticipantByClientId(clientId)
+    : (await getSql()<{ id: string }[]>`
+        select id
+        from participants
+        where client_id = ${clientId}::uuid
+        limit 1
+      `)[0] ?? null;
+
+  if (!participant) {
     throw new HTTPException(401, {
       message: "Participant not found for X-Client-Id. Call /api/participants/bootstrap first.",
     });
   }
 
-  c.set("participantId", participantRows[0].id);
+  c.set("participantId", participant.id);
   await next();
 };
 
 const assertApprovedProject = async (projectId: string) => {
-  const projectRows = await sql<{ status: string }[]>`
-    select status
-    from projects
-    where id = ${projectId}::uuid
-    limit 1
-  `;
+  const projectStatus = usingSqliteOnly
+    ? sqlitePrimary.getProjectStatus(projectId)
+    : (await getSql()<{ status: string }[]>`
+        select status
+        from projects
+        where id = ${projectId}::uuid
+        limit 1
+      `)[0] ?? null;
 
-  if (projectRows.length === 0) {
+  if (!projectStatus) {
     throw new HTTPException(404, { message: "Project not found" });
   }
 
-  if (projectRows[0].status !== "approved") {
+  if (projectStatus.status !== "approved") {
     throw new HTTPException(400, { message: "Project must be approved" });
   }
 };
@@ -121,7 +136,9 @@ app.use(
 );
 
 app.get("/api/health", async (c) => {
-  await sql`select 1`;
+  if (!usingSqliteOnly) {
+    await getSql()`select 1`;
+  }
   return c.json({ ok: true });
 });
 
@@ -138,18 +155,36 @@ app.post("/api/participants/bootstrap", requireClientId, async (c) => {
   }
 
   const clientId = c.get("clientId");
-  const rows = await sql<{ id: string; display_name: string; client_id: string }[]>`
-    insert into participants (display_name, client_id)
-    values (${displayName}, ${clientId}::uuid)
-    on conflict (client_id)
-    do update set display_name = excluded.display_name
-    returning id, display_name, client_id
-  `;
+  const participant = usingSqliteOnly
+    ? sqlitePrimary.bootstrapParticipant({
+        id: randomUUID(),
+        displayName,
+        clientId,
+      })
+    : (await getSql()<{ id: string; display_name: string; client_id: string }[]>`
+        insert into participants (display_name, client_id)
+        values (${displayName}, ${clientId}::uuid)
+        on conflict (client_id)
+        do update set display_name = excluded.display_name
+        returning id, display_name, client_id
+      `)[0];
+
+  mirrorSafe("participants.bootstrap", () => {
+    mirror.upsertParticipant({
+      id: participant.id,
+      displayName: "display_name" in participant ? participant.display_name : participant.displayName,
+      clientId: "client_id" in participant ? participant.client_id : participant.clientId,
+    });
+    mirror.appendEvent("participants.bootstrap", {
+      participantId: participant.id,
+      clientId: "client_id" in participant ? participant.client_id : participant.clientId,
+    });
+  });
 
   return c.json({
-    participantId: rows[0].id,
-    displayName: rows[0].display_name,
-    clientId: rows[0].client_id,
+    participantId: participant.id,
+    displayName: "display_name" in participant ? participant.display_name : participant.displayName,
+    clientId: "client_id" in participant ? participant.client_id : participant.clientId,
   });
 });
 
@@ -160,32 +195,38 @@ app.get("/api/projects/cards", async (c) => {
   const offset = Number.isInteger(offsetQuery) && offsetQuery >= 0 ? offsetQuery : 0;
   const rawClientId = getOptionalClientId(c.req.header("X-Client-Id"));
 
-  const rows = await sql<CardQueryResult[]>`
-    select
-      p.id as "projectId",
-      p.title,
-      p.short_description as "shortDescription",
-      count(s.participant_id)::int as "signupCount",
-      coalesce(
-        array_remove(array_agg(pt.display_name order by s.created_at asc), null),
-        array[]::text[]
-      ) as "participantNames",
-      exists (
-        select 1
-        from signups s2
-        join participants p2 on p2.id = s2.participant_id
-        where s2.project_id = p.id
-          and p2.client_id = ${rawClientId}::uuid
-      ) as "isSignedUp"
-    from projects p
-    left join signups s on s.project_id = p.id
-    left join participants pt on pt.id = s.participant_id
-    where p.status = 'approved'
-    group by p.id
-    order by p.created_at desc
-    limit ${limit + 1}
-    offset ${offset}
-  `;
+  const rows = usingSqliteOnly
+    ? sqlitePrimary.listApprovedProjectCards({
+        limit,
+        offset,
+        clientId: rawClientId,
+      })
+    : await getSql()<CardQueryResult[]>`
+        select
+          p.id as "projectId",
+          p.title,
+          p.short_description as "shortDescription",
+          count(s.participant_id)::int as "signupCount",
+          coalesce(
+            array_remove(array_agg(pt.display_name order by s.created_at asc), null),
+            array[]::text[]
+          ) as "participantNames",
+          exists (
+            select 1
+            from signups s2
+            join participants p2 on p2.id = s2.participant_id
+            where s2.project_id = p.id
+              and p2.client_id = ${rawClientId}::uuid
+          ) as "isSignedUp"
+        from projects p
+        left join signups s on s.project_id = p.id
+        left join participants pt on pt.id = s.participant_id
+        where p.status = 'approved'
+        group by p.id
+        order by p.created_at desc
+        limit ${limit + 1}
+        offset ${offset}
+      `;
 
   const items = rows.slice(0, limit).map((row) => ({
     projectId: row.projectId,
@@ -211,30 +252,34 @@ app.get("/api/projects/:id", async (c) => {
     throw new HTTPException(400, { message: "Invalid project id" });
   }
 
-  const projectRows = await sql<{ id: string; title: string; shortDescription: string }[]>`
-    select id, title, short_description as "shortDescription"
-    from projects
-    where id = ${projectId}::uuid
-      and status = 'approved'
-    limit 1
-  `;
+  const project = usingSqliteOnly
+    ? sqlitePrimary.getApprovedProject(projectId)
+    : (await getSql()<{ id: string; title: string; shortDescription: string }[]>`
+        select id, title, short_description as "shortDescription"
+        from projects
+        where id = ${projectId}::uuid
+          and status = 'approved'
+        limit 1
+      `)[0] ?? null;
 
-  if (projectRows.length === 0) {
+  if (!project) {
     throw new HTTPException(404, { message: "Project not found" });
   }
 
-  const participantRows = await sql<{ displayName: string }[]>`
-    select p.display_name as "displayName"
-    from signups s
-    join participants p on p.id = s.participant_id
-    where s.project_id = ${projectId}::uuid
-    order by s.created_at asc
-  `;
+  const participantRows = usingSqliteOnly
+    ? sqlitePrimary.getProjectParticipants(projectId)
+    : await getSql()<{ displayName: string }[]>`
+        select p.display_name as "displayName"
+        from signups s
+        join participants p on p.id = s.participant_id
+        where s.project_id = ${projectId}::uuid
+        order by s.created_at asc
+      `;
 
   return c.json({
-    projectId: projectRows[0].id,
-    title: projectRows[0].title,
-    shortDescription: projectRows[0].shortDescription,
+    projectId: project.id,
+    title: project.title,
+    shortDescription: project.shortDescription,
     participants: participantRows.map((row) => row.displayName),
   });
 });
@@ -250,19 +295,35 @@ app.post("/api/signups/join", requireClientId, resolveParticipant, async (c) => 
   await assertApprovedProject(projectId);
 
   const participantId = c.get("participantId");
-  const rows = await sql<{ participant_id: string; project_id: string }[]>`
-    insert into signups (participant_id, project_id)
-    values (${participantId}::uuid, ${projectId}::uuid)
-    on conflict (participant_id)
-    do update set
-      project_id = excluded.project_id,
-      created_at = now()
-    returning participant_id, project_id
-  `;
+  const signup = usingSqliteOnly
+    ? sqlitePrimary.upsertSignup({
+        participantId,
+        projectId,
+      })
+    : (await getSql()<{ participant_id: string; project_id: string }[]>`
+        insert into signups (participant_id, project_id)
+        values (${participantId}::uuid, ${projectId}::uuid)
+        on conflict (participant_id)
+        do update set
+          project_id = excluded.project_id,
+          created_at = now()
+        returning participant_id, project_id
+      `)[0];
+
+  mirrorSafe("signups.join", () => {
+    mirror.upsertSignup({
+      participantId: signup.participant_id,
+      projectId: signup.project_id,
+    });
+    mirror.appendEvent("signups.join", {
+      participantId: signup.participant_id,
+      projectId: signup.project_id,
+    });
+  });
 
   return c.json({
-    participantId: rows[0].participant_id,
-    projectId: rows[0].project_id,
+    participantId: signup.participant_id,
+    projectId: signup.project_id,
   });
 });
 
@@ -277,49 +338,79 @@ app.post("/api/signups/switch", requireClientId, resolveParticipant, async (c) =
   await assertApprovedProject(projectId);
 
   const participantId = c.get("participantId");
-  const currentRows = await sql<{ project_id: string }[]>`
-    select project_id
-    from signups
-    where participant_id = ${participantId}::uuid
-    limit 1
-  `;
+  const currentSignup = usingSqliteOnly
+    ? sqlitePrimary.getCurrentSignup(participantId)
+    : (await getSql()<{ project_id: string }[]>`
+        select project_id
+        from signups
+        where participant_id = ${participantId}::uuid
+        limit 1
+      `)[0] ?? null;
 
-  if (currentRows.length === 0) {
+  if (!currentSignup) {
     throw new HTTPException(400, { message: "Cannot switch without an existing signup" });
   }
 
-  const rows = await sql.begin(async (tx) => {
-    await tx`
-      delete from signups
-      where participant_id = ${participantId}::uuid
-    `;
+  const signup = usingSqliteOnly
+    ? sqlitePrimary.switchSignup({
+        participantId,
+        projectId,
+      })
+    : (
+        await getSql().begin(async (tx) => {
+          await tx`
+            delete from signups
+            where participant_id = ${participantId}::uuid
+          `;
 
-    return tx<{ participant_id: string; project_id: string }[]>`
-      insert into signups (participant_id, project_id)
-      values (${participantId}::uuid, ${projectId}::uuid)
-      returning participant_id, project_id
-    `;
+          return tx<{ participant_id: string; project_id: string }[]>`
+            insert into signups (participant_id, project_id)
+            values (${participantId}::uuid, ${projectId}::uuid)
+            returning participant_id, project_id
+          `;
+        })
+      )[0];
+
+  mirrorSafe("signups.switch", () => {
+    mirror.upsertSignup({
+      participantId: signup.participant_id,
+      projectId: signup.project_id,
+    });
+    mirror.appendEvent("signups.switch", {
+      participantId: signup.participant_id,
+      fromProjectId: currentSignup.project_id,
+      toProjectId: signup.project_id,
+    });
   });
 
   return c.json({
-    participantId: rows[0].participant_id,
-    projectId: rows[0].project_id,
+    participantId: signup.participant_id,
+    projectId: signup.project_id,
   });
 });
 
 app.delete("/api/signups", requireClientId, resolveParticipant, async (c) => {
   const participantId = c.get("participantId");
-  const rows = await sql<{ participant_id: string }[]>`
-    delete from signups
-    where participant_id = ${participantId}::uuid
-    returning participant_id
-  `;
+  const deletedSignup = usingSqliteOnly
+    ? sqlitePrimary.deleteSignup(participantId)
+    : (await getSql()<{ participant_id: string }[]>`
+        delete from signups
+        where participant_id = ${participantId}::uuid
+        returning participant_id
+      `)[0] ?? null;
 
-  if (rows.length === 0) {
+  if (!deletedSignup) {
     throw new HTTPException(404, { message: "No signup found for participant" });
   }
 
-  return c.json({ participantId: rows[0].participant_id, deleted: true });
+  mirrorSafe("signups.delete", () => {
+    mirror.deleteSignup(deletedSignup.participant_id);
+    mirror.appendEvent("signups.delete", {
+      participantId: deletedSignup.participant_id,
+    });
+  });
+
+  return c.json({ participantId: deletedSignup.participant_id, deleted: true });
 });
 
 app.post("/api/projects", requireClientId, resolveParticipant, async (c) => {
@@ -347,18 +438,40 @@ app.post("/api/projects", requireClientId, resolveParticipant, async (c) => {
     });
   }
 
-  const rows = await sql<{ id: string; title: string; short_description: string; status: string }[]>`
-    insert into projects (id, title, short_description, status)
-    values (${randomUUID()}::uuid, ${title}, ${shortDescription}, 'pending')
-    returning id, title, short_description, status
-  `;
+  const project = usingSqliteOnly
+    ? sqlitePrimary.createPendingProject({
+        id: randomUUID(),
+        title,
+        shortDescription,
+        status: "pending",
+      })
+    : (
+        await getSql()<{ id: string; title: string; short_description: string; status: string }[]>`
+          insert into projects (id, title, short_description, status)
+          values (${randomUUID()}::uuid, ${title}, ${shortDescription}, 'pending')
+          returning id, title, short_description, status
+        `
+      )[0];
+
+  mirrorSafe("projects.propose", () => {
+    mirror.upsertProject({
+      id: project.id,
+      title: project.title,
+      shortDescription: project.short_description,
+      status: project.status as ProjectStatus,
+    });
+    mirror.appendEvent("projects.propose", {
+      projectId: project.id,
+      status: project.status,
+    });
+  });
 
   return c.json(
     {
-      projectId: rows[0].id,
-      title: rows[0].title,
-      shortDescription: rows[0].short_description,
-      status: rows[0].status,
+      projectId: project.id,
+      title: project.title,
+      shortDescription: project.short_description,
+      status: project.status,
     },
     201,
   );
@@ -388,21 +501,40 @@ app.patch("/api/admin/projects/:id/status", async (c) => {
     });
   }
 
-  const rows = await sql<{ id: string; title: string; status: ProjectStatus }[]>`
-    update projects
-    set status = ${status}
-    where id = ${projectId}::uuid
-    returning id, title, status
-  `;
+  const project = usingSqliteOnly
+    ? sqlitePrimary.updateProjectStatus({ projectId, status })
+    : (
+        await getSql()<
+          { id: string; title: string; short_description: string; status: ProjectStatus }[]
+        >`
+          update projects
+          set status = ${status}
+          where id = ${projectId}::uuid
+          returning id, title, short_description, status
+        `
+      )[0] ?? null;
 
-  if (rows.length === 0) {
+  if (!project) {
     throw new HTTPException(404, { message: "Project not found" });
   }
 
+  mirrorSafe("admin.projects.status", () => {
+    mirror.upsertProject({
+      id: project.id,
+      title: project.title,
+      shortDescription: project.short_description,
+      status: project.status,
+    });
+    mirror.appendEvent("admin.projects.status", {
+      projectId: project.id,
+      status: project.status,
+    });
+  });
+
   return c.json({
-    projectId: rows[0].id,
-    title: rows[0].title,
-    status: rows[0].status,
+    projectId: project.id,
+    title: project.title,
+    status: project.status,
   });
 });
 
@@ -449,6 +581,16 @@ export const startServer = () =>
     },
     (info) => {
       console.log(`Server listening on http://localhost:${info.port}`);
+      if (usingSqliteOnly) {
+        console.log(`[sqlite-primary] enabled at ${env.debugSqlitePath}`);
+      } else {
+        console.log("[sqlite-primary] disabled");
+      }
+      if (mirror.enabled) {
+        console.log(`[sqlite-mirror] enabled at ${mirror.path}`);
+      } else {
+        console.log("[sqlite-mirror] disabled");
+      }
     },
   );
 

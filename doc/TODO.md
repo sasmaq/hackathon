@@ -110,7 +110,7 @@ For every item:
 - [x] Start Postgres locally (`docker compose up`)
 - [x] Run migrations against local DB
 - [x] Run Vite and Hono concurrently for local development
-- [x] Add `.env.local` (`VITE_API_URL`) and `server/.env` (`DATABASE_URL`, `CORS_ORIGIN`)
+- [x] Add root `.env` for both frontend (`VITE_API_URL`) and backend (`DATABASE_URL`, `CORS_ORIGIN`)
 - [x] Docs: how to run full stack locally
 
 ## 15. Environments (Preview + Prod)
@@ -189,23 +189,22 @@ For every item:
 
 ## 25. Dev Debug Flag (SQLite Mirror)
 
-- [ ] Add server env flag `DEBUG_SQLITE_MIRROR=true|false` (default `false`)
-- [ ] Add SQLite dependency and connection setup under `server/db/sqlite/`
-- [ ] Define SQLite schema for debug tables: `participants`, `projects`, `signups`, `events`
-- [ ] Build a mirror writer utility that upserts Postgres mutation payloads into SQLite
-- [ ] Gate mirror writes behind `DEBUG_SQLITE_MIRROR` so production behavior is unchanged
-- [ ] Hook mirror writes into handlers: bootstrap, join, switch, give up, propose, admin approve/reject
-- [ ] Add startup log indicating whether SQLite mirror mode is enabled and where DB file is stored
-- [ ] Add npm scripts: `debug:sqlite:inspect` and `debug:sqlite:reset` for local troubleshooting
-- [ ] Add tests for mirror on/off behavior and write-failure isolation (mirror errors must not break API response)
-- [ ] Document local usage: enable flag, inspect data, reset DB, and known limitations
+- [x] Add server env flag `DEBUG_SQLITE_MIRROR=true|false` (default `false`)
+- [x] Add SQLite dependency and connection setup under `server/db/sqlite/`
+- [x] Define SQLite schema for debug tables: `participants`, `projects`, `signups`, `events`
+- [x] Build a mirror writer utility that upserts Postgres mutation payloads into SQLite
+- [x] Gate mirror writes behind `DEBUG_SQLITE_MIRROR` so production behavior is unchanged
+- [x] Hook mirror writes into handlers: bootstrap, join, switch, give up, propose, admin approve/reject
+- [x] Add startup log indicating whether SQLite mirror mode is enabled and where DB file is stored
+- [x] Add npm scripts: `debug:sqlite:inspect` and `debug:sqlite:reset` for local troubleshooting
+- [x] Add tests for mirror on/off behavior and write-failure isolation (mirror errors must not break API response)
+- [x] Document local usage: enable flag, inspect data, reset DB, and known limitations
 
 ## 26. E2E Smoke Tests and Deploy Gates
 
 - [ ] Playwright: first load, list renders, details open
 - [ ] Playwright: join -> switch -> give up (against local or CI test API + Postgres)
 - [ ] Add E2E job to CI (nightly or on demand)
-- [ ] Netlify: run smoke tests on preview URL (optional)
 
 ## 27. Release Readiness
 
@@ -217,3 +216,12 @@ For every item:
 - [ ] Search/filter (title, newest)
 - [ ] Real-time updates for counts (WebSockets or SSE from Hono)
 - [ ] Authentication to replace `client_id`-only identity
+
+## 29. SQLite-Only Dev Server Mode
+
+- [x] Add env flag `DEBUG_SQLITE_ONLY=true|false` for primary DB selection
+- [x] Skip `DATABASE_URL` requirement when `DEBUG_SQLITE_ONLY=true`
+- [x] Add SQLite primary data adapter for participants/projects/signups reads and writes
+- [x] Run API handlers against SQLite when `DEBUG_SQLITE_ONLY=true`
+- [x] Add `npm run dev:server:sqlite` for no-Postgres local startup
+- [x] Document SQLite-only local usage in README

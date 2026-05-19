@@ -2,6 +2,7 @@
 
 import { app } from "./index";
 import { sql } from "./db/client.js";
+import { mirror } from "./db/sqlite/mirror.js";
 
 jest.mock("@hono/node-server", () => ({
   serve: jest.fn(),
@@ -13,6 +14,9 @@ jest.mock("./env.js", () => ({
     databaseUrl: "postgresql://test:test@localhost:5432/test",
     corsOrigins: ["http://localhost:5173"],
     adminSecret: "test-admin-secret",
+    debugSqliteOnly: false,
+    debugSqliteMirror: false,
+    debugSqlitePath: "server/db/sqlite/debug-mirror.sqlite",
   },
 }));
 
@@ -20,12 +24,66 @@ jest.mock("./db/client.js", () => ({
   sql: jest.fn(),
 }));
 
+jest.mock("./db/sqlite/mirror.js", () => ({
+  mirror: {
+    enabled: false,
+    path: "server/db/sqlite/debug-mirror.sqlite",
+    upsertParticipant: jest.fn(),
+    upsertProject: jest.fn(),
+    upsertSignup: jest.fn(),
+    deleteSignup: jest.fn(),
+    appendEvent: jest.fn(),
+  },
+  mirrorSafe: (action: string, operation: () => void) => {
+    if (!(globalThis as { __MIRROR_ENABLED__?: boolean }).__MIRROR_ENABLED__) {
+      return;
+    }
+
+    try {
+      operation();
+    } catch (error) {
+      console.warn(`[sqlite-mirror] ${action} failed`, error);
+    }
+  },
+}));
+
+jest.mock("./db/sqlite/primary.js", () => ({
+  sqlitePrimary: {
+    findParticipantByClientId: jest.fn(),
+    bootstrapParticipant: jest.fn(),
+    getProjectStatus: jest.fn(),
+    listApprovedProjectCards: jest.fn(),
+    getApprovedProject: jest.fn(),
+    getProjectParticipants: jest.fn(),
+    upsertSignup: jest.fn(),
+    getCurrentSignup: jest.fn(),
+    switchSignup: jest.fn(),
+    deleteSignup: jest.fn(),
+    createPendingProject: jest.fn(),
+    updateProjectStatus: jest.fn(),
+  },
+}));
+
 const sqlMock = sql as unknown as jest.Mock & { begin: jest.Mock };
+const mirrorMock = mirror as unknown as {
+  enabled: boolean;
+  upsertParticipant: jest.Mock;
+  upsertProject: jest.Mock;
+  upsertSignup: jest.Mock;
+  deleteSignup: jest.Mock;
+  appendEvent: jest.Mock;
+};
 
 describe("server handlers", () => {
   beforeEach(() => {
     sqlMock.mockReset();
     sqlMock.begin = jest.fn();
+    mirrorMock.upsertParticipant.mockReset();
+    mirrorMock.upsertProject.mockReset();
+    mirrorMock.upsertSignup.mockReset();
+    mirrorMock.deleteSignup.mockReset();
+    mirrorMock.appendEvent.mockReset();
+    (globalThis as { __MIRROR_ENABLED__?: boolean }).__MIRROR_ENABLED__ = false;
   });
 
   it("returns cards with pagination metadata and preview names", async () => {
@@ -255,6 +313,59 @@ describe("server handlers", () => {
       limit: 20,
       offset: 0,
       hasMore: false,
+    });
+  });
+
+  it("skips mirror writes when debug sqlite mirror is disabled", async () => {
+    sqlMock.mockResolvedValueOnce([
+      {
+        id: "participant-1",
+        display_name: "Grace Hopper",
+        client_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+    ]);
+
+    const response = await app.request("/api/participants/bootstrap", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Client-Id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+      body: JSON.stringify({ displayName: "Grace Hopper" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(mirrorMock.upsertParticipant).not.toHaveBeenCalled();
+  });
+
+  it("does not fail API responses when mirror write throws", async () => {
+    (globalThis as { __MIRROR_ENABLED__?: boolean }).__MIRROR_ENABLED__ = true;
+    mirrorMock.upsertParticipant.mockImplementationOnce(() => {
+      throw new Error("mirror down");
+    });
+
+    sqlMock.mockResolvedValueOnce([
+      {
+        id: "participant-1",
+        display_name: "Grace Hopper",
+        client_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+    ]);
+
+    const response = await app.request("/api/participants/bootstrap", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Client-Id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+      body: JSON.stringify({ displayName: "Grace Hopper" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      participantId: "participant-1",
+      displayName: "Grace Hopper",
+      clientId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
     });
   });
 });

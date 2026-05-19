@@ -1,6 +1,11 @@
 import type { ProjectCard, ProjectDetails } from "./types";
 
-const API_BASE_URL = globalThis.__APP_API_BASE_URL ?? "http://localhost:8787";
+const configuredApiBase = globalThis.__APP_API_BASE_URL?.trim();
+const fallbackOrigin =
+  typeof window !== "undefined" && window.location.origin.startsWith("http")
+    ? window.location.origin
+    : "http://localhost";
+const API_BASE_URL = configuredApiBase && configuredApiBase.length > 0 ? configuredApiBase : fallbackOrigin;
 
 type ProjectCardsResponse = {
   items: Array<{

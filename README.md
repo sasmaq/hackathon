@@ -97,18 +97,17 @@ docker compose down
 
 ## Backend Server (Hono)
 
-Create the server env file:
-
-```bash
-cp server/.env.example server/.env
-```
+All frontend and backend env vars now live in the root `.env` file.
 
 Server env vars:
 
-- `DATABASE_URL` (required): Postgres connection string used by the backend.
+- `DATABASE_URL` (required unless `DEBUG_SQLITE_ONLY=true`): Postgres connection string used by the backend.
 - `CORS_ORIGIN` (required): Comma-separated allowlist. Include local frontend (`http://localhost:5173`) and production Netlify origin(s).
 - `PORT` (optional): API server port (default `8787`).
 - `ADMIN_SECRET` (optional): required only for `PATCH /api/admin/projects/:id/status`.
+- `DEBUG_SQLITE_ONLY` (optional): set `true` to run the API on SQLite as the primary database (no Postgres dependency).
+- `DEBUG_SQLITE_MIRROR` (optional): set `true` to mirror mutation payloads into local SQLite for debugging.
+- `DEBUG_SQLITE_PATH` (optional): SQLite file location (default `server/db/sqlite/debug-mirror.sqlite`).
 
 Identity limitation (MVP): protected mutation routes resolve the participant from `X-Client-Id` and scope changes to that participant. This is not real authentication; if a client ID is exposed, another client could impersonate it. Future fix: replace header-only identity with session tokens or full auth.
 
@@ -116,6 +115,12 @@ Run the backend in dev mode:
 
 ```bash
 npm run dev:server
+```
+
+Run backend in SQLite-only dev mode (no Postgres required):
+
+```bash
+npm run dev:server:sqlite
 ```
 
 Core API usage:
@@ -144,19 +149,51 @@ npm run start:server
 
 Then open `http://localhost:8787`.
 
+### Debug SQLite Mirror (Development)
+
+Enable mirror mode in `.env`:
+
+```bash
+DEBUG_SQLITE_MIRROR=true
+DEBUG_SQLITE_PATH=server/db/sqlite/debug-mirror.sqlite
+```
+
+When enabled, mutation payloads from bootstrap/join/switch/give up/propose/admin status updates are mirrored into SQLite tables (`participants`, `projects`, `signups`, `events`) for local debugging only.
+
+Inspect mirrored data:
+
+```bash
+npm run debug:sqlite:inspect
+```
+
+Reset the mirror file:
+
+```bash
+npm run debug:sqlite:reset
+```
+
+Limitations:
+
+- Mirror writes are best-effort and never block API responses.
+- SQLite mirror is a debug aid, not a source of truth; Postgres remains authoritative.
+
+### SQLite-Only Primary Mode (Development)
+
+Set this in `.env` when you want local backend development without Postgres:
+
+```bash
+DEBUG_SQLITE_ONLY=true
+DEBUG_SQLITE_PATH=server/db/sqlite/debug-mirror.sqlite
+```
+
+In this mode, the API reads/writes participants, projects, and signups directly in SQLite.
+
 ## Full Stack Local Development
 
-Ensure local env files exist:
+Ensure local env file exists:
 
 ```bash
 cp .env.example .env
-cp server/.env.example server/.env
-```
-
-Create frontend local API config in `.env.local`:
-
-```bash
-VITE_API_URL=http://localhost:8787
 ```
 
 Then run full stack locally:
