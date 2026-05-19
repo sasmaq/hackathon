@@ -18,7 +18,10 @@ import {
   switchProjectSignup,
 } from "./api";
 import {
+  clearPersistedCurrentProjectId,
+  loadPersistedCurrentProjectId,
   loadIdentity,
+  persistCurrentProjectId,
   saveIdentity,
   updateDisplayName,
 } from "./data";
@@ -44,7 +47,10 @@ function HackathonApp() {
   const [hasMoreProjects, setHasMoreProjects] = useState(true);
   const [isProjectsLoading, setIsProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState<string | null>(null);
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(() => {
+    const nextIdentity = loadIdentity();
+    return nextIdentity ? loadPersistedCurrentProjectId(nextIdentity.clientId) : null;
+  });
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [detailsRefreshKey, setDetailsRefreshKey] = useState(0);
   const [proposalMessage, setProposalMessage] = useState<string | null>(null);
@@ -62,6 +68,11 @@ function HackathonApp() {
       const response = await getProjectCards(nextIdentity.clientId, PAGE_SIZE, offset);
       setProjectCards((previous) => (reset ? response.items : [...previous, ...response.items]));
       setHasMoreProjects(response.hasMore);
+      const signedProject = response.items.find((project) => project.isSignedUp);
+      if (signedProject) {
+        setCurrentProjectId(signedProject.id);
+        persistCurrentProjectId(nextIdentity.clientId, signedProject.id);
+      }
     } catch (error) {
       console.error(error);
       setProjectsError("Unable to load projects right now.");
@@ -72,10 +83,12 @@ function HackathonApp() {
 
   useEffect(() => {
     if (!identity) {
+      setCurrentProjectId(null);
       return;
     }
 
     let isCancelled = false;
+    setCurrentProjectId(loadPersistedCurrentProjectId(identity.clientId));
 
     queueMicrotask(() => {
       void (async () => {
@@ -110,6 +123,7 @@ function HackathonApp() {
   function handleStart(displayName: string) {
     const nextIdentity = saveIdentity(displayName);
     setIdentity(nextIdentity);
+    setCurrentProjectId(loadPersistedCurrentProjectId(nextIdentity.clientId));
     void navigate("/");
   }
 
@@ -174,6 +188,7 @@ function HackathonApp() {
     const isSwitch = Boolean(previousProjectId && previousProjectId !== projectId);
     setProjectsError(null);
     setCurrentProjectId(projectId);
+    persistCurrentProjectId(identity.clientId, projectId);
     applyOptimisticSignup(projectId, previousProjectId);
 
     try {
@@ -190,6 +205,11 @@ function HackathonApp() {
       console.error(error);
       setProjectsError("Unable to update your signup right now.");
       setCurrentProjectId(previousProjectId);
+      if (previousProjectId) {
+        persistCurrentProjectId(identity.clientId, previousProjectId);
+      } else {
+        clearPersistedCurrentProjectId(identity.clientId);
+      }
       applyOptimisticSignup(previousProjectId, projectId);
     }
 
@@ -208,6 +228,7 @@ function HackathonApp() {
     const previousProjectId = currentProjectId;
     setProjectsError(null);
     setCurrentProjectId(null);
+    clearPersistedCurrentProjectId(identity.clientId);
     applyOptimisticSignup(null, previousProjectId);
 
     try {
@@ -218,6 +239,9 @@ function HackathonApp() {
       console.error(error);
       setProjectsError("Unable to give up this project right now.");
       setCurrentProjectId(previousProjectId);
+      if (previousProjectId) {
+        persistCurrentProjectId(identity.clientId, previousProjectId);
+      }
       applyOptimisticSignup(previousProjectId, null);
     }
   }

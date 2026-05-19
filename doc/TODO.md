@@ -211,9 +211,9 @@ For every item:
 
 ## 27. E2E Smoke Tests and Deploy Gates
 
-- [ ] Playwright: first load, list renders, details open
+- [x] Playwright: first load, list renders, details open
 - [ ] Playwright: join -> switch -> give up (against local or CI test API + Postgres)
-- [ ] Add E2E job to CI (nightly or on demand)
+- [x] Add E2E job to CI (nightly or on demand)
 
 ## 28. Release Readiness
 

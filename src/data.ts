@@ -3,6 +3,7 @@ import type { Identity, Project, ProjectCard, ProjectDetails, Signup } from "./t
 const IDENTITY_KEY = "hackathon.identity";
 const PROJECTS_KEY = "hackathon.projects";
 const SIGNUPS_KEY = "hackathon.signups";
+const CURRENT_PROJECTS_KEY = "hackathon.currentProjects";
 
 const seedProjects: Project[] = [
   {
@@ -145,6 +146,33 @@ export function loadProjectDetails(projectId: string, identity: Identity): Proje
 
 export function loadCurrentProjectId(identity: Identity): string | null {
   return loadSignups().find((signup) => signup.clientId === identity.clientId)?.projectId ?? null;
+}
+
+export function loadPersistedCurrentProjectId(clientId: string): string | null {
+  const persisted = readJson<Record<string, string>>(CURRENT_PROJECTS_KEY, {});
+  return persisted[clientId] ?? null;
+}
+
+export function persistCurrentProjectId(clientId: string, projectId: string): void {
+  const persisted = readJson<Record<string, string>>(CURRENT_PROJECTS_KEY, {});
+  localStorage.setItem(
+    CURRENT_PROJECTS_KEY,
+    JSON.stringify({
+      ...persisted,
+      [clientId]: projectId,
+    }),
+  );
+}
+
+export function clearPersistedCurrentProjectId(clientId: string): void {
+  const persisted = readJson<Record<string, string>>(CURRENT_PROJECTS_KEY, {});
+
+  if (!(clientId in persisted)) {
+    return;
+  }
+
+  const { [clientId]: _removed, ...next } = persisted;
+  localStorage.setItem(CURRENT_PROJECTS_KEY, JSON.stringify(next));
 }
 
 export function joinProject(identity: Identity, projectId: string): void {
