@@ -168,10 +168,9 @@ For every item:
 
 ## 22. CI/CD Enhancements
 
-- [ ] Enforce tests and build in CI (fail PRs on errors)
-- [ ] CI: lint/typecheck/build frontend and server
-- [ ] Cache `node_modules` in CI
-- [ ] Ensure Netlify `VITE_API_URL` and API host env vars for preview and production
+- [x] Enforce tests and build in CI (fail PRs on errors)
+- [x] CI: lint/typecheck/build frontend and server
+- [x] Cache `node_modules` in CI
 
 ## 23. Security Hardening
 
