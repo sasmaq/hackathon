@@ -108,6 +108,7 @@ Server env vars:
 - `DATABASE_URL` (required): Postgres connection string used by the backend.
 - `CORS_ORIGIN` (required): Comma-separated allowlist. Include local frontend (`http://localhost:5173`) and production Netlify origin(s).
 - `PORT` (optional): API server port (default `8787`).
+- `ADMIN_SECRET` (optional): required only for `PATCH /api/admin/projects/:id/status`.
 
 Identity limitation (MVP): protected mutation routes resolve the participant from `X-Client-Id` and scope changes to that participant. This is not real authentication; if a client ID is exposed, another client could impersonate it. Future fix: replace header-only identity with session tokens or full auth.
 
@@ -200,4 +201,13 @@ Reject a project:
 update projects
 set status = 'rejected'
 where id = '<project-uuid>';
+```
+
+Optional admin API moderation:
+
+```bash
+curl -X PATCH "http://localhost:8787/api/admin/projects/<project-uuid>/status" \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Secret: $ADMIN_SECRET" \
+  -d '{"status":"approved"}'
 ```

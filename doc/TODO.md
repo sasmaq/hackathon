@@ -155,10 +155,10 @@ For every item:
 
 ## 20. Propose Project (API + UI)
 
-- [ ] `POST /api/projects` — insert with `status='pending'`
-- [ ] List/cards endpoints return only `approved` projects
-- [ ] Optional: `PATCH /api/admin/projects/:id/status` with `ADMIN_SECRET` for moderation
-- [ ] Document how to approve (SQL, DB console, or admin route)
+- [x] `POST /api/projects` — insert with `status='pending'`
+- [x] List/cards endpoints return only `approved` projects
+- [x] Optional: `PATCH /api/admin/projects/:id/status` with `ADMIN_SECRET` for moderation
+- [x] Document how to approve (SQL, DB console, or admin route)
 
 ## 21. Integration Tests
 

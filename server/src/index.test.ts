@@ -12,6 +12,7 @@ jest.mock("./env.js", () => ({
     port: 8787,
     databaseUrl: "postgresql://test:test@localhost:5432/test",
     corsOrigins: ["http://localhost:5173"],
+    adminSecret: "test-admin-secret",
   },
 }));
 
@@ -99,5 +100,31 @@ describe("server handlers", () => {
 
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: "Project not found" });
+  });
+
+  it("updates project status through admin endpoint", async () => {
+    sqlMock.mockResolvedValueOnce([
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        title: "AI Trip Planner",
+        status: "approved",
+      },
+    ]);
+
+    const response = await app.request("/api/admin/projects/11111111-1111-4111-8111-111111111111/status", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Admin-Secret": "test-admin-secret",
+      },
+      body: JSON.stringify({ status: "approved" }),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      projectId: "11111111-1111-4111-8111-111111111111",
+      title: "AI Trip Planner",
+      status: "approved",
+    });
   });
 });

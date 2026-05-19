@@ -21,4 +21,5 @@ export const env = {
   port: Number(process.env.PORT ?? DEFAULT_PORT),
   databaseUrl,
   corsOrigins: parseOrigins(process.env.CORS_ORIGIN),
+  adminSecret: process.env.ADMIN_SECRET,
 };

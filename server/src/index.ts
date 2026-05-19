@@ -30,6 +30,9 @@ const UUID_REGEX =
 const SCRIPT_TAG_REGEX = /<\s*\/?\s*script\b/i;
 const MAX_TITLE_LENGTH = 120;
 const MAX_SHORT_DESCRIPTION_LENGTH = 500;
+const PROJECT_STATUSES = ["pending", "approved", "rejected"] as const;
+
+type ProjectStatus = (typeof PROJECT_STATUSES)[number];
 
 export const app = new Hono<{ Variables: AppVariables }>();
 const distIndexPath = resolve(process.cwd(), "dist/index.html");
@@ -101,6 +104,8 @@ const normalizeTextInput = (value: unknown): string | null => {
 };
 
 const hasScriptTag = (value: string): boolean => SCRIPT_TAG_REGEX.test(value);
+const isProjectStatus = (value: string): value is ProjectStatus =>
+  PROJECT_STATUSES.includes(value as ProjectStatus);
 
 app.use(
   "/api/*",
@@ -357,6 +362,48 @@ app.post("/api/projects", requireClientId, resolveParticipant, async (c) => {
     },
     201,
   );
+});
+
+app.patch("/api/admin/projects/:id/status", async (c) => {
+  if (!env.adminSecret) {
+    throw new HTTPException(503, { message: "ADMIN_SECRET is not configured" });
+  }
+
+  const providedSecret = c.req.header("X-Admin-Secret");
+  if (!providedSecret || providedSecret !== env.adminSecret) {
+    throw new HTTPException(401, { message: "Invalid admin secret" });
+  }
+
+  const projectId = c.req.param("id");
+  if (!UUID_REGEX.test(projectId)) {
+    throw new HTTPException(400, { message: "Invalid project id" });
+  }
+
+  const payload = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const status = normalizeTextInput(payload.status);
+
+  if (!status || !isProjectStatus(status)) {
+    throw new HTTPException(400, {
+      message: "status must be one of: pending, approved, rejected",
+    });
+  }
+
+  const rows = await sql<{ id: string; title: string; status: ProjectStatus }[]>`
+    update projects
+    set status = ${status}
+    where id = ${projectId}::uuid
+    returning id, title, status
+  `;
+
+  if (rows.length === 0) {
+    throw new HTTPException(404, { message: "Project not found" });
+  }
+
+  return c.json({
+    projectId: rows[0].id,
+    title: rows[0].title,
+    status: rows[0].status,
+  });
 });
 
 app.use(
