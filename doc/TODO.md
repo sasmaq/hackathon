@@ -187,7 +187,16 @@ For every item:
 - [x] Better empty and error states
 - [x] Loading skeletons for cards and details
 
-## 25. Dev Debug Flag (SQLite Mirror)
+## 25. SQLite-Only Dev Server Mode
+
+- [x] Add env flag `DEBUG_SQLITE_ONLY=true|false` for primary DB selection
+- [x] Skip `DATABASE_URL` requirement when `DEBUG_SQLITE_ONLY=true`
+- [x] Add SQLite primary data adapter for participants/projects/signups reads and writes
+- [x] Run API handlers against SQLite when `DEBUG_SQLITE_ONLY=true`
+- [x] Add `npm run dev:server:sqlite` for no-Postgres local startup
+- [x] Document SQLite-only local usage in README
+
+## 26. Dev Debug Flag (SQLite Mirror)
 
 - [x] Add server env flag `DEBUG_SQLITE_MIRROR=true|false` (default `false`)
 - [x] Add SQLite dependency and connection setup under `server/db/sqlite/`
@@ -200,28 +209,19 @@ For every item:
 - [x] Add tests for mirror on/off behavior and write-failure isolation (mirror errors must not break API response)
 - [x] Document local usage: enable flag, inspect data, reset DB, and known limitations
 
-## 26. E2E Smoke Tests and Deploy Gates
+## 27. E2E Smoke Tests and Deploy Gates
 
 - [ ] Playwright: first load, list renders, details open
 - [ ] Playwright: join -> switch -> give up (against local or CI test API + Postgres)
 - [ ] Add E2E job to CI (nightly or on demand)
 
-## 27. Release Readiness
+## 28. Release Readiness
 
 - [ ] Final README: setup, environment, deploy (frontend + Hono API + Postgres), moderation
 - [ ] Confirm production Netlify deploy from `main` and production API deploy
 
-## 28. Post-MVP Backlog
+## 29. Post-MVP Backlog
 
 - [ ] Search/filter (title, newest)
 - [ ] Real-time updates for counts (WebSockets or SSE from Hono)
 - [ ] Authentication to replace `client_id`-only identity
-
-## 29. SQLite-Only Dev Server Mode
-
-- [x] Add env flag `DEBUG_SQLITE_ONLY=true|false` for primary DB selection
-- [x] Skip `DATABASE_URL` requirement when `DEBUG_SQLITE_ONLY=true`
-- [x] Add SQLite primary data adapter for participants/projects/signups reads and writes
-- [x] Run API handlers against SQLite when `DEBUG_SQLITE_ONLY=true`
-- [x] Add `npm run dev:server:sqlite` for no-Postgres local startup
-- [x] Document SQLite-only local usage in README
