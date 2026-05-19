@@ -174,10 +174,10 @@ For every item:
 
 ## 23. Security Hardening
 
-- [ ] Netlify `_headers`: CSP (`default-src 'self'`; `connect-src` includes API origin), `frame-ancestors 'none'`
-- [ ] Add Referrer-Policy, X-Content-Type-Options, Permissions-Policy
-- [ ] Validate inputs on propose form and Hono handlers (length, disallow script tags)
-- [ ] Sanitize/escape any user-provided text rendering (React default safe)
+- [x] Netlify `_headers`: CSP (`default-src 'self'`; `connect-src` includes API origin), `frame-ancestors 'none'`
+- [x] Add Referrer-Policy, X-Content-Type-Options, Permissions-Policy
+- [x] Validate inputs on propose form and Hono handlers (length, disallow script tags)
+- [x] Sanitize/escape any user-provided text rendering (React default safe)
 
 ## 24. UX Polish and Accessibility
 

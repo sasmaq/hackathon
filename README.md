@@ -211,3 +211,9 @@ curl -X PATCH "http://localhost:8787/api/admin/projects/<project-uuid>/status" \
   -H "X-Admin-Secret: $ADMIN_SECRET" \
   -d '{"status":"approved"}'
 ```
+
+### Frontend Security Notes
+
+- Netlify security headers are defined in `public/_headers` (CSP, `frame-ancestors`, Referrer-Policy, X-Content-Type-Options, Permissions-Policy).
+- Propose form input is validated on both client and server for required fields, max lengths, and script-tag rejection.
+- User-provided strings are rendered with standard React JSX interpolation (no `dangerouslySetInnerHTML`), so React escapes content by default.

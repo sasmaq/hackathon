@@ -25,6 +25,9 @@ import {
 import type { Identity, ProjectCard, ProjectDetails } from "./types";
 
 const PAGE_SIZE = 6;
+const MAX_PROPOSAL_TITLE_LENGTH = 120;
+const MAX_PROPOSAL_SHORT_DESCRIPTION_LENGTH = 500;
+const SCRIPT_TAG_REGEX = /<\s*\/?\s*script\b/i;
 
 export default function App() {
   return (
@@ -921,13 +924,33 @@ function ProposalForm({
 }) {
   const [title, setTitle] = useState("");
   const [shortDescription, setShortDescription] = useState("");
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmedTitle = title.trim();
     const trimmedDescription = shortDescription.trim();
+    setValidationError(null);
 
     if (!trimmedTitle || !trimmedDescription) {
+      setValidationError("Title and short description are required.");
+      return;
+    }
+
+    if (trimmedTitle.length > MAX_PROPOSAL_TITLE_LENGTH) {
+      setValidationError(`Title must be ${MAX_PROPOSAL_TITLE_LENGTH} characters or fewer.`);
+      return;
+    }
+
+    if (trimmedDescription.length > MAX_PROPOSAL_SHORT_DESCRIPTION_LENGTH) {
+      setValidationError(
+        `Short description must be ${MAX_PROPOSAL_SHORT_DESCRIPTION_LENGTH} characters or fewer.`,
+      );
+      return;
+    }
+
+    if (SCRIPT_TAG_REGEX.test(trimmedTitle) || SCRIPT_TAG_REGEX.test(trimmedDescription)) {
+      setValidationError("Script tags are not allowed.");
       return;
     }
 
@@ -948,6 +971,7 @@ function ProposalForm({
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="AI changelog assistant"
+          maxLength={MAX_PROPOSAL_TITLE_LENGTH}
           required
         />
 
@@ -958,10 +982,16 @@ function ProposalForm({
           onChange={(event) => setShortDescription(event.target.value)}
           placeholder="What should participants build?"
           rows={4}
+          maxLength={MAX_PROPOSAL_SHORT_DESCRIPTION_LENGTH}
           required
         />
 
         <button type="submit">Submit for review</button>
+        {validationError ? (
+          <p className="empty-copy" role="alert">
+            {validationError}
+          </p>
+        ) : null}
         {message ? (
           <p className="success-message" role="status">
             {message}
