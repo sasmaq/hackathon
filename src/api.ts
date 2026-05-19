@@ -1,13 +1,6 @@
 import type { ProjectCard, ProjectDetails } from "./types";
 
-const API_BASE_URL = (() => {
-  try {
-    return (Function("return import.meta.env.VITE_API_URL")() as string | undefined) ??
-      "http://localhost:8787";
-  } catch {
-    return "http://localhost:8787";
-  }
-})();
+const API_BASE_URL = globalThis.__APP_API_BASE_URL ?? "http://localhost:8787";
 
 type ProjectCardsResponse = {
   items: Array<{

@@ -72,7 +72,36 @@ function HackathonApp() {
       return;
     }
 
-    void loadProjectsPage(identity, true);
+    let isCancelled = false;
+
+    queueMicrotask(() => {
+      void (async () => {
+        setProjectsError(null);
+        setIsProjectsLoading(true);
+
+        try {
+          const response = await getProjectCards(identity.clientId, PAGE_SIZE, 0);
+
+          if (!isCancelled) {
+            setProjectCards(response.items);
+            setHasMoreProjects(response.hasMore);
+          }
+        } catch (error) {
+          if (!isCancelled) {
+            console.error(error);
+            setProjectsError("Unable to load projects right now.");
+          }
+        } finally {
+          if (!isCancelled) {
+            setIsProjectsLoading(false);
+          }
+        }
+      })();
+    });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [identity]);
 
   function handleStart(displayName: string) {
@@ -328,10 +357,10 @@ function ProjectRoute({
   proposalMessage: string | null;
   detailsRefreshKey: number;
   onSelect: (projectId: string) => void;
-  onJoin: (projectId: string) => void;
-  onGiveUp: () => void;
+  onJoin: (projectId: string) => Promise<void> | void;
+  onGiveUp: () => Promise<void> | void;
   onLoadMore: () => void;
-  onProposal: (title: string, shortDescription: string) => void;
+  onProposal: (title: string, shortDescription: string) => Promise<void> | void;
 }) {
   const { projectId } = useParams();
   const [selectedProject, setSelectedProject] = useState<ProjectDetails | null>(null);
@@ -339,15 +368,16 @@ function ProjectRoute({
   const [detailsError, setDetailsError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!projectId) {
-      setSelectedProject(null);
-      setDetailsError(null);
-      return;
-    }
-
     let isCancelled = false;
 
     const run = async () => {
+      if (!projectId) {
+        setSelectedProject(null);
+        setDetailsError(null);
+        setIsDetailsLoading(false);
+        return;
+      }
+
       setIsDetailsLoading(true);
       setDetailsError(null);
 
@@ -369,7 +399,9 @@ function ProjectRoute({
       }
     };
 
-    void run();
+    queueMicrotask(() => {
+      void run();
+    });
 
     return () => {
       isCancelled = true;
@@ -431,10 +463,10 @@ function ProjectBoard({
   proposalMessage: string | null;
   showProposal: boolean;
   onSelect: (projectId: string) => void;
-  onJoin: (projectId: string) => void;
-  onGiveUp: () => void;
+  onJoin: (projectId: string) => Promise<void> | void;
+  onGiveUp: () => Promise<void> | void;
   onLoadMore: () => void;
-  onProposal: (title: string, shortDescription: string) => void;
+  onProposal: (title: string, shortDescription: string) => Promise<void> | void;
 }) {
   return (
     <section className="layout-grid" aria-label="Hackathon projects">
@@ -619,8 +651,8 @@ function ProjectList({
   error: string | null;
   currentProjectId: string | null;
   onSelect: (projectId: string) => void;
-  onJoin: (projectId: string) => void;
-  onGiveUp: () => void;
+  onJoin: (projectId: string) => Promise<void> | void;
+  onGiveUp: () => Promise<void> | void;
   onLoadMore: () => void;
 }) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -633,7 +665,7 @@ function ProjectList({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          onLoadMore();
+          void onLoadMore();
         }
       },
       { rootMargin: "240px" },
@@ -717,8 +749,8 @@ function ProjectCardView({
   project: ProjectCard;
   currentProjectId: string | null;
   onSelect: (projectId: string) => void;
-  onJoin: (projectId: string) => void;
-  onGiveUp: () => void;
+  onJoin: (projectId: string) => Promise<void> | void;
+  onGiveUp: () => Promise<void> | void;
 }) {
   const isCurrent = project.id === currentProjectId;
   const ctaLabel = isCurrent ? "Give up" : currentProjectId ? "Switch here" : "Join project";
@@ -727,9 +759,9 @@ function ProjectCardView({
     event.stopPropagation();
 
     if (isCurrent) {
-      onGiveUp();
+      void onGiveUp();
     } else {
-      onJoin(project.id);
+      void onJoin(project.id);
     }
   }
 
@@ -796,8 +828,8 @@ function ProjectDetailsPanel({
   hasRequestedProject: boolean;
   project: ProjectDetails | null;
   currentProjectId: string | null;
-  onJoin: (projectId: string) => void;
-  onGiveUp: () => void;
+  onJoin: (projectId: string) => Promise<void> | void;
+  onGiveUp: () => Promise<void> | void;
 }) {
   if (isLoading) {
     return (
@@ -870,7 +902,9 @@ function ProjectDetailsPanel({
       <button
         type="button"
         className={isCurrent ? "danger" : ""}
-        onClick={() => (isCurrent ? onGiveUp() : onJoin(project.id))}
+        onClick={() => {
+          void (isCurrent ? onGiveUp() : onJoin(project.id));
+        }}
       >
         {ctaLabel}
       </button>
@@ -882,7 +916,7 @@ function ProposalForm({
   onSubmit,
   message,
 }: {
-  onSubmit: (title: string, shortDescription: string) => void;
+  onSubmit: (title: string, shortDescription: string) => Promise<void> | void;
   message: string | null;
 }) {
   const [title, setTitle] = useState("");
@@ -897,7 +931,7 @@ function ProposalForm({
       return;
     }
 
-    onSubmit(trimmedTitle, trimmedDescription);
+    void onSubmit(trimmedTitle, trimmedDescription);
     setTitle("");
     setShortDescription("");
   }

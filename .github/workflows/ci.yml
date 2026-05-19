@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    name: Lint, typecheck, and build
+    name: Lint, test, and build (frontend + server)
     runs-on: ubuntu-latest
 
     steps:
@@ -35,12 +35,27 @@ jobs:
       - name: Run unit tests
         run: npm run test:ci
 
+      - name: Run server handler tests
+        run: npm run test -- server/src/index.test.ts --runInBand
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Build server
+        run: npm run build:server
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E smoke tests
-        continue-on-error: true
+      - name: Run E2E tests
         run: npm run test:e2e:ci
 
-      - name: Build project
-        run: npm run build
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore

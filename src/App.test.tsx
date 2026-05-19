@@ -80,7 +80,7 @@ function mockJsonResponse(status: number, body: unknown): Response {
   return {
     ok: status >= 200 && status < 300,
     status,
-    json: async () => body,
+    json: () => Promise.resolve(body),
   } as Response;
 }
 
@@ -95,7 +95,7 @@ describe("App", () => {
       },
     });
 
-    globalThis.fetch = jest.fn(async (input) => {
+    globalThis.fetch = jest.fn((input) => {
       const url = String(input);
 
       if (url.includes("/api/projects/cards")) {
@@ -261,7 +261,7 @@ describe("App", () => {
       "hackathon.identity",
       JSON.stringify({ clientId: "participant-1", displayName: "Grace Hopper" }),
     );
-    (globalThis.fetch as jest.Mock).mockImplementationOnce(async () =>
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       mockJsonResponse(200, {
         items: [],
         limit: 6,

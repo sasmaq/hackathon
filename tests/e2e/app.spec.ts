@@ -27,6 +27,24 @@ async function mockApi(page: Page) {
     });
   });
 
+  await page.route("**/api/projects", async (route) => {
+    if (route.request().method() !== "POST") {
+      await route.continue();
+      return;
+    }
+
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        projectId: "88888888-8888-4888-8888-888888888888",
+        title: "Agentic post-mortem helper",
+        shortDescription: "Summarize incidents and suggest follow-up actions.",
+        status: "pending",
+      }),
+    });
+  });
+
   await page.route("**/api/projects/*", async (route) => {
     const url = route.request().url();
     const projectId = url.split("/api/projects/")[1];
@@ -50,6 +68,18 @@ async function mockApi(page: Page) {
       status: 404,
       contentType: "application/json",
       body: JSON.stringify({ error: "Project not found" }),
+    });
+  });
+
+  await page.route("**/api/participants/bootstrap", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        participantId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        displayName: "Margaret Hamilton",
+        clientId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      }),
     });
   });
 }
@@ -108,6 +138,7 @@ test("project details route renders details panel", async ({ page }) => {
 
 test("proposal route accepts a new project idea", async ({ page }) => {
   await bootstrapIdentity(page, "Margaret Hamilton");
+  await mockApi(page);
   await page.goto("/propose");
 
   await expect(page.getByRole("heading", { name: /suggest a new project/i })).toBeVisible();
