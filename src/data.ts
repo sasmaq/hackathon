@@ -171,7 +171,8 @@ export function clearPersistedCurrentProjectId(clientId: string): void {
     return;
   }
 
-  const { [clientId]: _removed, ...next } = persisted;
+  const next = { ...persisted };
+  delete next[clientId];
   localStorage.setItem(CURRENT_PROJECTS_KEY, JSON.stringify(next));
 }
 

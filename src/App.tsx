@@ -83,12 +83,10 @@ function HackathonApp() {
 
   useEffect(() => {
     if (!identity) {
-      setCurrentProjectId(null);
       return;
     }
 
     let isCancelled = false;
-    setCurrentProjectId(loadPersistedCurrentProjectId(identity.clientId));
 
     queueMicrotask(() => {
       void (async () => {
