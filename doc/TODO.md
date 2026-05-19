@@ -224,4 +224,42 @@ For every item:
 
 - [ ] Search/filter (title, newest)
 - [ ] Real-time updates for counts (WebSockets or SSE from Hono)
-- [ ] Authentication to replace `client_id`-only identity
+
+## 30. User Registration and Authentication
+
+- [ ] Add `users` table migration (email unique, `phone_e164` unique, password hash, timestamps; link or replace `participants.client_id`)
+- [ ] Add server env vars: `SESSION_SECRET`, optional `AUTH_COOKIE_*` (name, secure, sameSite); document in README and `.env.example`
+- [ ] Choose auth approach (e.g. email + password with httpOnly session cookie, or magic link) and document threat model vs current `X-Client-Id` impersonation risk
+- [ ] `POST /api/auth/register` — validate email format, phone (normalize to E.164), password policy, display name; hash password (e.g. bcrypt/argon2); reject duplicate email or phone (`409`)
+- [ ] `POST /api/auth/login` — verify credentials; issue signed session (cookie or bearer per chosen approach)
+- [ ] `POST /api/auth/logout` — invalidate session server-side (if using server sessions) and clear client cookie
+- [ ] `GET /api/auth/me` — return current user/participant profile (including phone) for authenticated requests; never expose phone on public project APIs
+- [ ] Add auth middleware: resolve participant from session instead of (or in addition to) `X-Client-Id` on protected routes
+- [ ] Deprecate or gate `POST /api/participants/bootstrap` for anonymous-only bootstrap; registered users use auth endpoints
+- [ ] Migration path: optional one-time link from existing `client_id` localStorage row to new account on first login/register
+- [ ] Registration page (email, phone, password, display name) and login page (email + password only); validation, accessible labels, error states
+- [ ] Header: show logged-in user; Sign out; link to Register / Log in when anonymous
+- [ ] API client: send session cookie (credentials) or `Authorization` header; stop sending `X-Client-Id` once session is established
+- [ ] Rate-limit register/login endpoints (per IP and per email) to reduce abuse
+- [ ] Security: never log passwords; constant-time compare; CSRF protection if using cookies; tighten CORS/credentials for auth routes
+- [ ] Unit tests: register validation (email, phone E.164, duplicate phone), login success/failure, protected route without session returns 401
+- [ ] Integration tests: register → login → join project → logout → mutation denied
+- [ ] E2E: register new user, log out, log in, join a project
+- [ ] Update moderation and env docs for authenticated operators if admin routes gain user-based access later (see section 31)
+
+## 31. Admin Dashboard (Proposed Projects)
+
+- [ ] `GET /api/admin/projects` — return pending proposals (`status=pending` default; optional `status` filter); require `X-Admin-Secret` (same as existing PATCH)
+- [ ] Response shape: `{ items: [{ projectId, title, shortDescription, status, createdAt }] }` sorted by `created_at desc`
+- [ ] Reuse `PATCH /api/admin/projects/:id/status` for approve (`approved`) and reject (`rejected`) from the dashboard
+- [ ] Return `401` when `ADMIN_SECRET` is missing or wrong; return `503` or `501` when `ADMIN_SECRET` is not configured on the server
+- [ ] Add admin route `/admin` (not linked from public nav; optional bookmark-only)
+- [ ] Admin gate: prompt for admin secret on first visit (sessionStorage) or use server-side session once section 30 auth exists for admin role
+- [ ] Pending list UI: table or cards with title, short description, submitted date, and Approve / Reject actions
+- [ ] On approve/reject: call PATCH, remove row or update status inline, show success/error toast
+- [ ] Empty state when no pending proposals; loading and error states
+- [ ] Do not expose `ADMIN_SECRET` in frontend build for production; document local-only `VITE_ADMIN_SECRET` dev pattern vs operator-entered secret
+- [ ] Security: rate-limit admin routes; audit log approve/reject (console or `events` table) optional
+- [ ] Unit tests: list pending requires secret; PATCH integration from list payload
+- [ ] E2E (optional): enter secret → see seeded pending project → approve → project appears on public list
+- [ ] Document moderation workflow in README (replace SQL/DB-console steps where possible)
