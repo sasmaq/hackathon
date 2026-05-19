@@ -54,19 +54,34 @@ function HackathonApp() {
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [detailsRefreshKey, setDetailsRefreshKey] = useState(0);
   const [proposalMessage, setProposalMessage] = useState<string | null>(null);
+  const isProjectsLoadingRef = useRef(false);
+  const projectCardsRef = useRef<ProjectCard[]>([]);
+
+  useEffect(() => {
+    projectCardsRef.current = projectCards;
+  }, [projectCards]);
 
   const loadProjectsPage = async (nextIdentity: Identity, reset = false) => {
-    if (isProjectsLoading) {
+    if (isProjectsLoadingRef.current) {
       return;
     }
 
+    isProjectsLoadingRef.current = true;
     setProjectsError(null);
     setIsProjectsLoading(true);
 
     try {
-      const offset = reset ? 0 : projectCards.length;
+      const offset = reset ? 0 : projectCardsRef.current.length;
       const response = await getProjectCards(nextIdentity.clientId, PAGE_SIZE, offset);
-      setProjectCards((previous) => (reset ? response.items : [...previous, ...response.items]));
+      setProjectCards((previous) => {
+        if (reset) {
+          return response.items;
+        }
+
+        const existingIds = new Set(previous.map((project) => project.id));
+        const nextItems = response.items.filter((project) => !existingIds.has(project.id));
+        return [...previous, ...nextItems];
+      });
       setHasMoreProjects(response.hasMore);
       const signedProject = response.items.find((project) => project.isSignedUp);
       if (signedProject) {
@@ -77,6 +92,7 @@ function HackathonApp() {
       console.error(error);
       setProjectsError("Unable to load projects right now.");
     } finally {
+      isProjectsLoadingRef.current = false;
       setIsProjectsLoading(false);
     }
   };
@@ -703,7 +719,7 @@ function ProjectList({
   const isLoadingMore = isLoading && projects.length > 0;
 
   useEffect(() => {
-    if (!hasMore || !sentinelRef.current) {
+    if (!hasMore || !sentinelRef.current || isLoading || projects.length === 0) {
       return;
     }
 
@@ -718,7 +734,7 @@ function ProjectList({
 
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
-  }, [hasMore, onLoadMore]);
+  }, [hasMore, isLoading, onLoadMore, projects.length]);
 
   return (
     <>
