@@ -274,6 +274,8 @@ function HackathonApp() {
                 onJoin={handleJoin}
                 onGiveUp={handleGiveUp}
                 onLoadMore={() => void loadProjectsPage(identity)}
+                onRetryProjects={() => void loadProjectsPage(identity, true)}
+                onRetryDetails={() => {}}
                 onProposal={handleProposal}
               />
             }
@@ -297,6 +299,7 @@ function HackathonApp() {
                 onJoin={handleJoin}
                 onGiveUp={handleGiveUp}
                 onLoadMore={() => void loadProjectsPage(identity)}
+                onRetryProjects={() => void loadProjectsPage(identity, true)}
                 onProposal={handleProposal}
               />
             }
@@ -323,6 +326,8 @@ function HackathonApp() {
                 onJoin={handleJoin}
                 onGiveUp={handleGiveUp}
                 onLoadMore={() => void loadProjectsPage(identity)}
+                onRetryProjects={() => void loadProjectsPage(identity, true)}
+                onRetryDetails={() => {}}
                 onProposal={handleProposal}
               />
             }
@@ -348,6 +353,7 @@ function ProjectRoute({
   onJoin,
   onGiveUp,
   onLoadMore,
+  onRetryProjects,
   onProposal,
 }: {
   identity: Identity;
@@ -363,12 +369,14 @@ function ProjectRoute({
   onJoin: (projectId: string) => Promise<void> | void;
   onGiveUp: () => Promise<void> | void;
   onLoadMore: () => void;
+  onRetryProjects: () => void;
   onProposal: (title: string, shortDescription: string) => Promise<void> | void;
 }) {
   const { projectId } = useParams();
   const [selectedProject, setSelectedProject] = useState<ProjectDetails | null>(null);
   const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [detailsRetryKey, setDetailsRetryKey] = useState(0);
 
   useEffect(() => {
     let isCancelled = false;
@@ -409,7 +417,7 @@ function ProjectRoute({
     return () => {
       isCancelled = true;
     };
-  }, [detailsRefreshKey, identity.clientId, projectId]);
+  }, [detailsRefreshKey, detailsRetryKey, identity.clientId, projectId]);
 
   return (
     <ProjectBoard
@@ -429,6 +437,8 @@ function ProjectRoute({
       onJoin={onJoin}
       onGiveUp={onGiveUp}
       onLoadMore={onLoadMore}
+      onRetryProjects={onRetryProjects}
+      onRetryDetails={() => setDetailsRetryKey((value) => value + 1)}
       onProposal={onProposal}
     />
   );
@@ -451,6 +461,8 @@ function ProjectBoard({
   onJoin,
   onGiveUp,
   onLoadMore,
+  onRetryProjects,
+  onRetryDetails,
   onProposal,
 }: {
   projects: ProjectCard[];
@@ -469,6 +481,8 @@ function ProjectBoard({
   onJoin: (projectId: string) => Promise<void> | void;
   onGiveUp: () => Promise<void> | void;
   onLoadMore: () => void;
+  onRetryProjects: () => void;
+  onRetryDetails: () => void;
   onProposal: (title: string, shortDescription: string) => Promise<void> | void;
 }) {
   return (
@@ -493,6 +507,7 @@ function ProjectBoard({
           onJoin={onJoin}
           onGiveUp={onGiveUp}
           onLoadMore={onLoadMore}
+          onRetry={onRetryProjects}
         />
       </div>
 
@@ -509,6 +524,7 @@ function ProjectBoard({
               currentProjectId={currentProjectId}
               onJoin={onJoin}
               onGiveUp={onGiveUp}
+              onRetry={onRetryDetails}
             />
             <Link className="panel-link" to="/propose">
               Propose a new project
@@ -646,6 +662,7 @@ function ProjectList({
   onJoin,
   onGiveUp,
   onLoadMore,
+  onRetry,
 }: {
   projects: ProjectCard[];
   totalCount: number;
@@ -657,8 +674,11 @@ function ProjectList({
   onJoin: (projectId: string) => Promise<void> | void;
   onGiveUp: () => Promise<void> | void;
   onLoadMore: () => void;
+  onRetry: () => void;
 }) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const isInitialLoading = isLoading && projects.length === 0;
+  const isLoadingMore = isLoading && projects.length > 0;
 
   useEffect(() => {
     if (!hasMore || !sentinelRef.current) {
@@ -680,7 +700,7 @@ function ProjectList({
 
   return (
     <>
-      {isLoading ? (
+      {isInitialLoading ? (
         <div className="cards-grid loading-grid" aria-label="Loading projects">
           {Array.from({ length: PAGE_SIZE }).map((_, index) => (
             <article className="project-card skeleton-card" key={`skeleton-${index}`} aria-hidden="true">
@@ -712,10 +732,13 @@ function ProjectList({
           <p className="eyebrow">Project Board</p>
           <h3>Unable to load projects</h3>
           <p>{error}</p>
+          <button type="button" className="secondary" onClick={onRetry}>
+            Retry loading projects
+          </button>
         </section>
       ) : null}
       <div className="cards-grid">
-        {!isLoading &&
+        {projects.length > 0 &&
           projects.map((project) => (
           <ProjectCardView
             key={project.id}
@@ -729,12 +752,12 @@ function ProjectList({
       </div>
 
       <div className="load-more" ref={sentinelRef}>
-        {isLoading ? <span>Loading projects...</span> : null}
+        {isLoadingMore ? <span>Loading more projects...</span> : null}
         {hasMore ? (
           <button type="button" onClick={onLoadMore} disabled={isLoading}>
             Load more projects
           </button>
-        ) : !isLoading ? (
+        ) : !isLoadingMore ? (
           <span>All approved projects are visible.</span>
         ) : null}
       </div>
@@ -825,6 +848,7 @@ function ProjectDetailsPanel({
   currentProjectId,
   onJoin,
   onGiveUp,
+  onRetry,
 }: {
   isLoading: boolean;
   error: string | null;
@@ -833,6 +857,7 @@ function ProjectDetailsPanel({
   currentProjectId: string | null;
   onJoin: (projectId: string) => Promise<void> | void;
   onGiveUp: () => Promise<void> | void;
+  onRetry: () => void;
 }) {
   if (isLoading) {
     return (
@@ -852,6 +877,11 @@ function ProjectDetailsPanel({
         <p className="eyebrow">Project Details</p>
         <h2>Project unavailable</h2>
         <p>{error ?? "This project was not found or is no longer approved for public browsing."}</p>
+        {error ? (
+          <button type="button" className="secondary" onClick={onRetry}>
+            Retry loading details
+          </button>
+        ) : null}
         <Link className="panel-link" to="/">
           Back to project board
         </Link>

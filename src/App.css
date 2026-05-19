@@ -1,6 +1,20 @@
 :root {
-  color: #172033;
-  background: #eef2ff;
+  --color-text: #172033;
+  --color-text-strong: #111827;
+  --color-text-muted: #475569;
+  --color-text-subtle: #64748b;
+  --color-bg: #eef2ff;
+  --color-surface: rgba(255, 255, 255, 0.9);
+  --color-border: rgba(99, 102, 241, 0.22);
+  --color-primary: #4338ca;
+  --color-primary-hover: #3730a3;
+  --color-primary-soft: #e0e7ff;
+  --color-primary-soft-hover: #c7d2fe;
+  --color-focus: #f59e0b;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  color: var(--color-text);
+  background: var(--color-bg);
   font-family:
     Inter,
     ui-sans-serif,
@@ -32,7 +46,7 @@ textarea {
 button {
   border: 0;
   border-radius: 999px;
-  background: #4f46e5;
+  background: var(--color-primary);
   color: #ffffff;
   cursor: pointer;
   font-weight: 800;
@@ -44,7 +58,7 @@ button {
 }
 
 button:hover {
-  background: #4338ca;
+  background: var(--color-primary-hover);
   transform: translateY(-1px);
 }
 
@@ -52,25 +66,25 @@ button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 .project-card:focus-visible {
-  outline: 3px solid #f59e0b;
+  outline: 3px solid var(--color-focus);
   outline-offset: 3px;
 }
 
 button.secondary {
-  background: #e0e7ff;
+  background: var(--color-primary-soft);
   color: #312e81;
 }
 
 button.secondary:hover {
-  background: #c7d2fe;
+  background: var(--color-primary-soft-hover);
 }
 
 button.danger {
-  background: #dc2626;
+  background: var(--color-danger);
 }
 
 button.danger:hover {
-  background: #b91c1c;
+  background: var(--color-danger-hover);
 }
 
 input,
@@ -79,7 +93,7 @@ textarea {
   border: 1px solid #c7d2fe;
   border-radius: 18px;
   background: #ffffff;
-  color: #172033;
+  color: var(--color-text);
   padding: 0.9rem 1rem;
 }
 
@@ -103,8 +117,8 @@ label {
 .onboarding-card,
 .panel,
 .project-card {
-  border: 1px solid rgba(99, 102, 241, 0.18);
-  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   box-shadow: 0 20px 60px rgba(79, 70, 229, 0.12);
 }
 
@@ -138,7 +152,7 @@ label {
 .onboarding-card h1 {
   max-width: 760px;
   margin: 0;
-  color: #111827;
+  color: var(--color-text-strong);
   font-size: clamp(2.3rem, 6vw, 4.8rem);
   letter-spacing: -0.07em;
   line-height: 0.95;
@@ -148,7 +162,7 @@ label {
 .onboarding-card p,
 .panel p,
 .project-card p {
-  color: #475569;
+  color: var(--color-text-muted);
   line-height: 1.6;
 }
 
@@ -205,13 +219,13 @@ label {
 .section-heading h2,
 .panel h2 {
   margin: 0;
-  color: #111827;
+  color: var(--color-text-strong);
   letter-spacing: -0.04em;
 }
 
 .muted,
 .empty-copy {
-  color: #64748b;
+  color: var(--color-text-subtle);
 }
 
 .cards-grid {
@@ -290,7 +304,7 @@ label {
   margin: 0;
   overflow-y: auto;
   padding-right: 0.25rem;
-  color: #111827;
+  color: var(--color-text-strong);
   font-size: 1.35rem;
   letter-spacing: -0.03em;
   line-height: 1.45;
@@ -310,7 +324,7 @@ label {
   justify-content: space-between;
   gap: 0.75rem;
   align-items: center;
-  color: #64748b;
+  color: var(--color-text-subtle);
   font-size: 0.84rem;
   font-weight: 800;
 }
@@ -375,7 +389,7 @@ label {
   display: inline-flex;
   justify-content: center;
   border-radius: 999px;
-  background: #e0e7ff;
+  background: var(--color-primary-soft);
   color: #312e81;
   font-weight: 800;
   padding: 0.82rem 1.1rem;
@@ -383,7 +397,7 @@ label {
 }
 
 .panel-link:hover {
-  background: #c7d2fe;
+  background: var(--color-primary-soft-hover);
 }
 
 .details-panel,
@@ -420,13 +434,13 @@ label {
 
 .metric-row strong {
   display: block;
-  color: #111827;
+  color: var(--color-text-strong);
   font-size: 2rem;
   line-height: 1;
 }
 
 .metric-row span {
-  color: #64748b;
+  color: var(--color-text-subtle);
   font-weight: 800;
 }
 
@@ -523,5 +537,22 @@ label {
   .card-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --color-text: #0b0f19;
+    --color-text-strong: #05070d;
+    --color-text-muted: #1f2937;
+    --color-text-subtle: #334155;
+    --color-bg: #ffffff;
+    --color-surface: #ffffff;
+    --color-border: #1f2937;
+    --color-primary: #1d4ed8;
+    --color-primary-hover: #1e40af;
+    --color-primary-soft: #dbeafe;
+    --color-primary-soft-hover: #bfdbfe;
+    --color-focus: #b45309;
   }
 }

@@ -183,9 +183,9 @@ For every item:
 
 - [x] Keyboard navigation and focus outlines
 - [x] ARIA labels for buttons and forms
-- [ ] High-contrast check and color tokens
-- [ ] Better empty and error states
-- [ ] Loading skeletons for cards and details
+- [x] High-contrast check and color tokens
+- [x] Better empty and error states
+- [x] Loading skeletons for cards and details
 
 ## 25. Dev Debug Flag (SQLite Mirror)
 
