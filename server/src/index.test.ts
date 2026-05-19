@@ -20,11 +20,12 @@ jest.mock("./db/client.js", () => ({
   sql: jest.fn(),
 }));
 
-const sqlMock = sql as unknown as jest.Mock;
+const sqlMock = sql as unknown as jest.Mock & { begin: jest.Mock };
 
 describe("server handlers", () => {
   beforeEach(() => {
     sqlMock.mockReset();
+    sqlMock.begin = jest.fn();
   });
 
   it("returns cards with pagination metadata and preview names", async () => {
@@ -125,6 +126,135 @@ describe("server handlers", () => {
       projectId: "11111111-1111-4111-8111-111111111111",
       title: "AI Trip Planner",
       status: "approved",
+    });
+  });
+
+  it("supports join -> switch -> give up lifecycle", async () => {
+    sqlMock
+      .mockResolvedValueOnce([{ id: "participant-1" }])
+      .mockResolvedValueOnce([{ status: "approved" }])
+      .mockResolvedValueOnce([{ participant_id: "participant-1", project_id: "project-1" }])
+      .mockResolvedValueOnce([{ id: "participant-1" }])
+      .mockResolvedValueOnce([{ status: "approved" }])
+      .mockResolvedValueOnce([{ project_id: "project-1" }])
+      .mockResolvedValueOnce([{ id: "participant-1" }])
+      .mockResolvedValueOnce([{ participant_id: "participant-1" }]);
+
+    sqlMock.begin.mockImplementation(async (callback: (tx: typeof sqlMock) => Promise<unknown>) => {
+      const tx = jest
+        .fn()
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ participant_id: "participant-1", project_id: "project-2" }]);
+      return callback(tx as unknown as typeof sqlMock);
+    });
+
+    const joinResponse = await app.request("/api/signups/join", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Client-Id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+      body: JSON.stringify({ projectId: "11111111-1111-4111-8111-111111111111" }),
+    });
+
+    expect(joinResponse.status).toBe(200);
+    expect(await joinResponse.json()).toEqual({
+      participantId: "participant-1",
+      projectId: "project-1",
+    });
+
+    const switchResponse = await app.request("/api/signups/switch", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Client-Id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+      body: JSON.stringify({ projectId: "22222222-2222-4222-8222-222222222222" }),
+    });
+
+    expect(switchResponse.status).toBe(200);
+    expect(await switchResponse.json()).toEqual({
+      participantId: "participant-1",
+      projectId: "project-2",
+    });
+
+    const giveUpResponse = await app.request("/api/signups", {
+      method: "DELETE",
+      headers: {
+        "X-Client-Id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+    });
+
+    expect(giveUpResponse.status).toBe(200);
+    expect(await giveUpResponse.json()).toEqual({
+      participantId: "participant-1",
+      deleted: true,
+    });
+  });
+
+  it("keeps proposed projects hidden from cards until approved", async () => {
+    sqlMock
+      .mockResolvedValueOnce([{ id: "participant-1" }])
+      .mockResolvedValueOnce([
+        {
+          id: "33333333-3333-4333-8333-333333333333",
+          title: "Pending Proposal",
+          short_description: "Created as pending",
+          status: "pending",
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          projectId: "11111111-1111-4111-8111-111111111111",
+          title: "Approved Project",
+          shortDescription: "Only approved cards should appear",
+          signupCount: 1,
+          participantNames: ["Ada"],
+          isSignedUp: false,
+        },
+      ]);
+
+    const proposeResponse = await app.request("/api/projects", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Client-Id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+      body: JSON.stringify({
+        title: "Pending Proposal",
+        shortDescription: "Created as pending",
+      }),
+    });
+
+    expect(proposeResponse.status).toBe(201);
+    expect(await proposeResponse.json()).toEqual({
+      projectId: "33333333-3333-4333-8333-333333333333",
+      title: "Pending Proposal",
+      shortDescription: "Created as pending",
+      status: "pending",
+    });
+
+    const cardsResponse = await app.request("/api/projects/cards?limit=20&offset=0", {
+      headers: {
+        "X-Client-Id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      },
+    });
+
+    expect(cardsResponse.status).toBe(200);
+    expect(await cardsResponse.json()).toEqual({
+      items: [
+        {
+          projectId: "11111111-1111-4111-8111-111111111111",
+          title: "Approved Project",
+          shortDescription: "Only approved cards should appear",
+          signupCount: 1,
+          participantNamesPreview: ["Ada"],
+          isSignedUp: false,
+        },
+      ],
+      limit: 20,
+      offset: 0,
+      hasMore: false,
     });
   });
 });

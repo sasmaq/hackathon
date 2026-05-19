@@ -162,9 +162,9 @@ For every item:
 
 ## 21. Integration Tests
 
-- [ ] Mock API (or test DB + Hono app) for list/details flows
-- [ ] Server tests: join → switch → give up lifecycle
-- [ ] Tests: propose → not visible in cards until approved
+- [x] Mock API (or test DB + Hono app) for list/details flows
+- [x] Server tests: join -> switch -> give up lifecycle
+- [x] Tests: propose -> not visible in cards until approved
 
 ## 22. CI/CD Enhancements
 
