@@ -187,19 +187,32 @@ For every item:
 - [ ] Better empty and error states
 - [ ] Loading skeletons for cards and details
 
-## 25. E2E Smoke Tests and Deploy Gates
+## 25. Dev Debug Flag (SQLite Mirror)
+
+- [ ] Add server env flag `DEBUG_SQLITE_MIRROR=true|false` (default `false`)
+- [ ] Add SQLite dependency and connection setup under `server/db/sqlite/`
+- [ ] Define SQLite schema for debug tables: `participants`, `projects`, `signups`, `events`
+- [ ] Build a mirror writer utility that upserts Postgres mutation payloads into SQLite
+- [ ] Gate mirror writes behind `DEBUG_SQLITE_MIRROR` so production behavior is unchanged
+- [ ] Hook mirror writes into handlers: bootstrap, join, switch, give up, propose, admin approve/reject
+- [ ] Add startup log indicating whether SQLite mirror mode is enabled and where DB file is stored
+- [ ] Add npm scripts: `debug:sqlite:inspect` and `debug:sqlite:reset` for local troubleshooting
+- [ ] Add tests for mirror on/off behavior and write-failure isolation (mirror errors must not break API response)
+- [ ] Document local usage: enable flag, inspect data, reset DB, and known limitations
+
+## 26. E2E Smoke Tests and Deploy Gates
 
 - [ ] Playwright: first load, list renders, details open
 - [ ] Playwright: join -> switch -> give up (against local or CI test API + Postgres)
 - [ ] Add E2E job to CI (nightly or on demand)
 - [ ] Netlify: run smoke tests on preview URL (optional)
 
-## 26. Release Readiness
+## 27. Release Readiness
 
 - [ ] Final README: setup, environment, deploy (frontend + Hono API + Postgres), moderation
 - [ ] Confirm production Netlify deploy from `main` and production API deploy
 
-## 27. Post-MVP Backlog
+## 28. Post-MVP Backlog
 
 - [ ] Search/filter (title, newest)
 - [ ] Real-time updates for counts (WebSockets or SSE from Hono)
