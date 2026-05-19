@@ -33,62 +33,51 @@ For every item:
 - [x] Create first unit test
 - [x] Update CI workflow to run unit tests step
 
-## 4. Netlify Deployment via CLI
-
-- [ ] Add `netlify-cli` as devDependency
-- [ ] Create site (CLI or UI once) and record SITE_ID
-- [ ] Add GitHub Secret: `NETLIFY_AUTH_TOKEN`
-- [ ] Configure repository variable: `NETLIFY_SITE_ID`
-- [ ] Configure CI to deploy preview builds on PRs
-- [ ] Configure CI to deploy production on main
-- [ ] Document local auth and manual deploy flow
-- [ ] Do NOT connect repo in Netlify UI (CLI-driven only)
-
-## 5. App Shell and Routing (Mocked)
+## 4. App Shell and Routing (Mocked)
 
 - [x] Add app layout (header, content container)
 - [x] Add routes: `/` (Project List), `/project/:id` (Details), `/propose` (Propose)
 - [x] Add theme/tokens and basic global styles
 - [x] Add error boundary and 404 route
 
-## 6. Testing Foundations
+## 5. Testing Foundations
 
 - [x] Install Playwright and browsers
 - [x] First E2E: app renders at `/`
 - [x] Wire Playwright to CI (allow failure initially if flaky)
 
-## 7. Identity (localStorage)
+## 6. Identity (localStorage)
 
 - [x] Implement name prompt modal (first visit)
 - [x] Store `display_name` and generated `client_id` (UUID) in localStorage
 - [x] Show current display name in header
 
-## 8. Project Cards (Mocked)
+## 7. Project Cards (Mocked)
 
 - [x] Create `ProjectCard` component (title, shortDescription, signupCount, participant chips)
 - [x] Add `isSignedUp` visual state (highlight + badge)
 - [x] Mock projects for dev (JSON or in-memory)
 - [x] Infinite scroll: append next mocked page on bottom reach
 
-## 9. Details View (Mocked)
+## 8. Details View (Mocked)
 
 - [x] Build details page (title, short description, full participant list)
 - [x] Contextual CTA: Join / Switch / Give up (mocked state)
 - [x] Empty states and loading placeholders
 
-## 10. Propose Project (Mocked)
+## 9. Propose Project (Mocked)
 
 - [x] Propose form with validation (title, shortDescription)
 - [x] Submit adds to local mocked list with `pending` status
 - [x] Do not show pending proposals in main list
 
-## 11. Component and Unit Tests Expansion (Mocked)
+## 10. Component and Unit Tests Expansion (Mocked)
 
 - [x] Tests: `ProjectCard` renders fields and chips
 - [x] Tests: name prompt stores localStorage values
 - [x] Tests: infinite scroll appends items
 
-## 12. Database Setup (Postgres)
+## 11. Database Setup (Postgres)
 
 - [x] Add Docker Compose for local development with Postgres
 - [x] Create tables: `participants`, `projects`, `signups` (see PRD data model)
@@ -96,7 +85,7 @@ For every item:
 - [x] Seed a few `projects` (approved and pending)
 - [x] Document moderation flow (SQL, DB console, or admin API route)
 
-## 13. Hono Server Scaffold
+## 12. Hono Server Scaffold
 
 - [x] Create `server/` with Hono and `@hono/node-server`
 - [x] Add `GET /api/health` and shared error JSON shape `{ "error": "message" }`
@@ -105,7 +94,7 @@ For every item:
 - [x] Add npm scripts: `dev:server`, `build:server` (as needed)
 - [x] Document server env vars in README
 
-## 14. Local Dev: Full Stack
+## 13. Local Dev: Full Stack
 
 - [x] Start Postgres locally (`docker compose up`)
 - [x] Run migrations against local DB
@@ -113,7 +102,7 @@ For every item:
 - [x] Add root `.env` for both frontend (`VITE_API_URL`) and backend (`DATABASE_URL`, `CORS_ORIGIN`)
 - [x] Docs: how to run full stack locally
 
-## 15. Environments (Preview + Prod)
+## 14. Environments (Preview + Prod)
 
 - [ ] Provision preview and prod Postgres databases (or schemas)
 - [ ] Deploy Hono API to preview and production hosts; record API base URLs
@@ -121,7 +110,7 @@ For every item:
 - [x] Set `VITE_API_URL` per Netlify context; set `DATABASE_URL`, `CORS_ORIGIN`, optional `ADMIN_SECRET` on API host
 - [x] Document environment strategy and migration flow
 
-## 16. API Validation and Access Rules
+## 15. API Validation and Access Rules
 
 - [x] Resolve participant from `X-Client-Id` on protected routes
 - [x] Public reads return only `approved` projects
@@ -129,14 +118,14 @@ For every item:
 - [x] Scope signup mutations to the resolved participant (note `client_id` impersonation risk for MVP)
 - [x] Document limitations and future fix (session tokens or real auth)
 
-## 17. Hono Route: Project Cards and Details
+## 16. Hono Route: Project Cards and Details
 
 - [x] `GET /api/projects/cards` — aggregation SQL (signup count, name preview, `isSignedUp`)
 - [x] Verify pagination (`limit`, `offset`) and ordering (`created_at desc`)
 - [x] `GET /api/projects/:id` — approved project details + full participant list
 - [x] Add handler/repository tests and usage notes in repo
 
-## 18. Frontend Integration (Read-Only)
+## 17. Frontend Integration (Read-Only)
 
 - [x] Add thin API client (`fetch` + `VITE_API_URL`); send `X-Client-Id` on requests
 - [x] Replace mocked list with `GET /api/projects/cards`
@@ -144,7 +133,7 @@ For every item:
 - [x] Details view: `GET /api/projects/:id`
 - [x] Implement loading and error states
 
-## 19. Participant Bootstrap and Signup Mutations
+## 18. Participant Bootstrap and Signup Mutations
 
 - [x] `POST /api/participants/bootstrap` — upsert by `client_id` + `display_name`
 - [x] `POST /api/signups/join` — insert signup for current participant
@@ -152,34 +141,35 @@ For every item:
 - [x] `POST /api/signups/switch` — transactional switch (delete + insert)
 - [x] On first join/propose, call bootstrap from client; store `participant_id` in memory if returned
 - [x] Wire UI CTAs to API; optimistic update then refetch
+- [x] Persist current signup selection across page refresh for consistent Join/Switch/Give up CTAs
 
-## 20. Propose Project (API + UI)
+## 19. Propose Project (API + UI)
 
 - [x] `POST /api/projects` — insert with `status='pending'`
 - [x] List/cards endpoints return only `approved` projects
 - [x] Optional: `PATCH /api/admin/projects/:id/status` with `ADMIN_SECRET` for moderation
 - [x] Document how to approve (SQL, DB console, or admin route)
 
-## 21. Integration Tests
+## 20. Integration Tests
 
 - [x] Mock API (or test DB + Hono app) for list/details flows
 - [x] Server tests: join -> switch -> give up lifecycle
 - [x] Tests: propose -> not visible in cards until approved
 
-## 22. CI/CD Enhancements
+## 21. CI/CD Enhancements
 
 - [x] Enforce tests and build in CI (fail PRs on errors)
 - [x] CI: lint/typecheck/build frontend and server
 - [x] Cache `node_modules` in CI
 
-## 23. Security Hardening
+## 22. Security Hardening
 
 - [x] Netlify `_headers`: CSP (`default-src 'self'`; `connect-src` includes API origin), `frame-ancestors 'none'`
 - [x] Add Referrer-Policy, X-Content-Type-Options, Permissions-Policy
 - [x] Validate inputs on propose form and Hono handlers (length, disallow script tags)
 - [x] Sanitize/escape any user-provided text rendering (React default safe)
 
-## 24. UX Polish and Accessibility
+## 23. UX Polish and Accessibility
 
 - [x] Keyboard navigation and focus outlines
 - [x] ARIA labels for buttons and forms
@@ -187,7 +177,7 @@ For every item:
 - [x] Better empty and error states
 - [x] Loading skeletons for cards and details
 
-## 25. SQLite-Only Dev Server Mode
+## 24. SQLite-Only Dev Server Mode
 
 - [x] Add env flag `DEBUG_SQLITE_ONLY=true|false` for primary DB selection
 - [x] Skip `DATABASE_URL` requirement when `DEBUG_SQLITE_ONLY=true`
@@ -196,7 +186,7 @@ For every item:
 - [x] Add `npm run dev:server:sqlite` for no-Postgres local startup
 - [x] Document SQLite-only local usage in README
 
-## 26. Dev Debug Flag (SQLite Mirror)
+## 25. Dev Debug Flag (SQLite Mirror)
 
 - [x] Add server env flag `DEBUG_SQLITE_MIRROR=true|false` (default `false`)
 - [x] Add SQLite dependency and connection setup under `server/db/sqlite/`
@@ -209,16 +199,26 @@ For every item:
 - [x] Add tests for mirror on/off behavior and write-failure isolation (mirror errors must not break API response)
 - [x] Document local usage: enable flag, inspect data, reset DB, and known limitations
 
-## 27. E2E Smoke Tests and Deploy Gates
+## 26. E2E Smoke Tests and Deploy Gates
 
 - [x] Playwright: first load, list renders, details open
 - [x] Playwright: join -> switch -> give up (against local or CI test API + Postgres)
 - [x] Add E2E job to CI (nightly or on demand)
 
+## 27. Netlify Deployment via CLI
+
+- [ ] Add `netlify-cli` as devDependency
+- [ ] Create site (CLI or UI once) and record SITE_ID
+- [ ] Add GitHub Secret: `NETLIFY_AUTH_TOKEN`
+- [ ] Configure repository variable: `NETLIFY_SITE_ID`
+- [ ] Configure CI to deploy preview builds on PRs
+- [ ] Configure CI to deploy production on main
+- [ ] Document local auth and manual deploy flow
+- [ ] Do NOT connect repo in Netlify UI (CLI-driven only)
+
 ## 28. Release Readiness
 
 - [ ] Final README: setup, environment, deploy (frontend + Hono API + Postgres), moderation
-- [ ] Confirm production Netlify deploy from `main` and production API deploy
 
 ## 29. Post-MVP Backlog
 
